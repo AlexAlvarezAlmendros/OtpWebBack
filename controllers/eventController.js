@@ -32,7 +32,8 @@ const getEvent = async (req, res) => {
 const createEvent = async (req, res) => {
     try {
         // Obtener userId del token JWT
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         const eventData = {
             ...req.body,
@@ -54,11 +55,12 @@ const updateEvent = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingEvent = await Event.findById(id);
             if (!existingEvent) {
                 return res.status(404).json({ error: 'Evento no encontrado' });
@@ -86,11 +88,12 @@ const deleteEvent = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingEvent = await Event.findById(id);
             if (!existingEvent) {
                 return res.status(404).json({ error: 'Evento no encontrado' });

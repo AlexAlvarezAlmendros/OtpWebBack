@@ -33,7 +33,8 @@ const getStudio = async (req, res) => {
 const createStudio = async (req, res) => {
 	try {
 		// Obtener userId del token JWT
-		const userId = req.user.sub;
+		const user = req.auth || req.user;
+		const userId = user.sub;
 		
 		const studioData = {
 			...req.body,
@@ -55,11 +56,12 @@ const updateStudio = async (req, res) => {
 	}
 	
 	try {
-		const userId = req.user.sub;
+		const user = req.auth || req.user;
+		const userId = user.sub;
 		
 		
 		// Si no es admin, verificar que sea el dueño del recurso
-		if (!isUserAdmin(req.user)) {
+		if (!isUserAdmin(user)) {
 			const existingStudio = await Studio.findById(id);
 			if (!existingStudio) {
 				return res.status(404).json({ error: 'Estudio no encontrado' });
@@ -87,11 +89,12 @@ const deleteStudio = async (req, res) => {
 	}
 	
 	try {
-		const userId = req.user.sub;
+		const user = req.auth || req.user;
+		const userId = user.sub;
 		
 		
 		// Si no es admin, verificar que sea el dueño del recurso
-		if (!isUserAdmin(req.user)) {
+		if (!isUserAdmin(user)) {
 			const existingStudio = await Studio.findById(id);
 			if (!existingStudio) {
 				return res.status(404).json({ error: 'Estudio no encontrado' });

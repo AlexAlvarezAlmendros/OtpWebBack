@@ -5,16 +5,20 @@ const checkPermissions = (requiredPermissions) => {
     try {
       console.log('🚀 checkPermissions middleware started');
       console.log('🔍 req.user exists:', !!req.user);
-      console.log('🔍 req.user content:', JSON.stringify(req.user, null, 2));
+      console.log('🔍 req.auth exists:', !!req.auth);
+      console.log('🔍 req.auth content:', JSON.stringify(req.auth, null, 2));
       
-      if (!req.user) {
+      // express-jwt v8+ usa req.auth en lugar de req.user
+      const user = req.auth || req.user;
+      
+      if (!user) {
         console.log('❌ No user in request');
         return res.status(401).json({ error: 'Usuario no autenticado' });
       }
 
-      const { permissions, roles } = getUserPermissionsAndRoles(req.user);
+      const { permissions, roles } = getUserPermissionsAndRoles(user);
 
-      console.log('🔍 Checking permissions for user:', req.user.email || req.user.sub);
+      console.log('🔍 Checking permissions for user:', user.email || user.sub);
       console.log('📋 Required permissions:', requiredPermissions);
       console.log('✅ User permissions:', permissions);
       console.log('👤 User roles:', roles);
@@ -82,11 +86,13 @@ const checkPermissions = (requiredPermissions) => {
 
 const checkOwnership = (req, res, next) => {
   try {
-    const userId = req.user.sub;
+    // express-jwt v8+ usa req.auth en lugar de req.user
+    const user = req.auth || req.user;
+    const userId = user.sub;
 
     // Admin puede acceder a todo
-    if (isUserAdmin(req.user)) {
-      console.log('🔑 Admin access granted for user:', req.user.email || userId);
+    if (isUserAdmin(user)) {
+      console.log('🔑 Admin access granted for user:', user.email || userId);
       return next();
     }
     
@@ -94,7 +100,7 @@ const checkOwnership = (req, res, next) => {
     req.checkOwnership = true;
     req.authenticatedUserId = userId;
     
-    console.log('📝 Ownership check required for user:', req.user.email || userId);
+    console.log('📝 Ownership check required for user:', user.email || userId);
     next();
   } catch (error) {
     console.error('❌ Error in ownership middleware:', error);

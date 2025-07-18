@@ -6,7 +6,7 @@ const {
     updateRelease,
     deleteRelease
 } = require('../controllers/releaseController');
-const { checkJwt, logJwtResult } = require('../middleware/auth');
+const { checkJwt } = require('../middleware/auth');
 const { checkPermissions, checkOwnership } = require('../middleware/permissions');
 
 const router = express.Router();
@@ -20,7 +20,6 @@ router.get('/:id', getRelease);
 // POST (crear) un nuevo release (requiere autenticación y permisos)
 router.post('/', 
   checkJwt, 
-  logJwtResult,
   checkPermissions(['write:releases']), 
   createRelease
 );

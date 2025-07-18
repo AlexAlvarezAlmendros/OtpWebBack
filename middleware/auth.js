@@ -1,6 +1,12 @@
 const { expressjwt: jwt } = require('express-jwt');
 const jwks = require('jwks-rsa');
 
+// Log de variables de entorno
+console.log('🔐 Auth0 config:');
+console.log('  - Domain:', process.env.AUTH0_DOMAIN);
+console.log('  - Audience:', process.env.AUTH0_AUDIENCE);
+console.log('  - JWKS URI:', `https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`);
+
 const checkJwt = jwt({
   secret: jwks.expressJwtSecret({
     cache: true,

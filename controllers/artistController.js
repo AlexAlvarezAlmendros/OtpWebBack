@@ -33,7 +33,8 @@ const getArtist = async (req, res) => {
 const createArtist = async (req, res) => {
     try {
         // Obtener userId del token JWT
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         const artistData = {
             ...req.body,
@@ -55,10 +56,11 @@ const updateArtist = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingArtist = await Artist.findById(id);
             if (!existingArtist) {
                 return res.status(404).json({ error: 'Artista no encontrado' });
@@ -86,10 +88,11 @@ const deleteArtist = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingArtist = await Artist.findById(id);
             if (!existingArtist) {
                 return res.status(404).json({ error: 'Artista no encontrado' });

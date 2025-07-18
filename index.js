@@ -22,7 +22,9 @@ app.use((req, res, next) => {
 
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL del frontend
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 

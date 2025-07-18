@@ -32,8 +32,9 @@ const getRelease = async (req, res) => {
 // CREATE a new release
 const createRelease = async (req, res) => {
     try {
-        // Obtener userId del token JWT
-        const userId = req.user.sub;
+        // Obtener userId del token JWT (express-jwt v8+ usa req.auth)
+        const user = req.auth || req.user;
+        const userId = user.sub;
         
         const releaseData = {
             ...req.body,
@@ -55,10 +56,11 @@ const updateRelease = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
 
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingRelease = await Release.findById(id);
             if (!existingRelease) {
                 return res.status(404).json({ error: 'Release no encontrado' });
@@ -86,10 +88,11 @@ const deleteRelease = async (req, res) => {
     }
     
     try {
-        const userId = req.user.sub;
+        const user = req.auth || req.user;
+        const userId = user.sub;
 
         // Si no es admin, verificar que sea el dueño del recurso
-        if (!isUserAdmin(req.user)) {
+        if (!isUserAdmin(user)) {
             const existingRelease = await Release.findById(id);
             if (!existingRelease) {
                 return res.status(404).json({ error: 'Release no encontrado' });

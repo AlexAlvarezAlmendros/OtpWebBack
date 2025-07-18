@@ -125,3 +125,7 @@ decode-token.js
 AUTH0_IMPLEMENTATION_PLAN.md
 test-request.js
 test-with-token.js
+test-server.js
+test-basic-auth.js
+.gitignore
+test-complete-release.js
