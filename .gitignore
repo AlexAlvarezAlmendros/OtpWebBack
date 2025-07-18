@@ -121,3 +121,7 @@ data/
 # Package lock files (uncomment if you want to ignore them)
 # package-lock.json
 # yarn.lock
+decode-token.js
+AUTH0_IMPLEMENTATION_PLAN.md
+test-request.js
+test-with-token.js

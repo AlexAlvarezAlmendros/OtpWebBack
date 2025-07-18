@@ -1,5 +1,6 @@
 const Release = require('../models/Release');
 const mongoose = require('mongoose');
+const { isUserAdmin } = require('../utils/authHelpers');
 
 // GET all releases
 const getReleases = async (req, res) => {
@@ -31,7 +32,15 @@ const getRelease = async (req, res) => {
 // CREATE a new release
 const createRelease = async (req, res) => {
     try {
-        const release = await Release.create(req.body);
+        // Obtener userId del token JWT
+        const userId = req.user.sub;
+        
+        const releaseData = {
+            ...req.body,
+            userId: userId // Asegurar que el userId viene del token
+        };
+        
+        const release = await Release.create(releaseData);
         res.status(201).json(release);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -44,7 +53,21 @@ const updateRelease = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ error: 'ID de release no válido' });
     }
+    
     try {
+        const userId = req.user.sub;
+
+        // Si no es admin, verificar que sea el dueño del recurso
+        if (!isUserAdmin(req.user)) {
+            const existingRelease = await Release.findById(id);
+            if (!existingRelease) {
+                return res.status(404).json({ error: 'Release no encontrado' });
+            }
+            if (existingRelease.userId !== userId) {
+                return res.status(403).json({ error: 'No tienes permisos para modificar este release' });
+            }
+        }
+        
         const release = await Release.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
         if (!release) {
             return res.status(404).json({ error: 'Release no encontrado' });
@@ -61,11 +84,29 @@ const deleteRelease = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ error: 'ID de release no válido' });
     }
-    const release = await Release.findByIdAndDelete(id);
-    if (!release) {
-        return res.status(404).json({ error: 'Release no encontrado' });
+    
+    try {
+        const userId = req.user.sub;
+
+        // Si no es admin, verificar que sea el dueño del recurso
+        if (!isUserAdmin(req.user)) {
+            const existingRelease = await Release.findById(id);
+            if (!existingRelease) {
+                return res.status(404).json({ error: 'Release no encontrado' });
+            }
+            if (existingRelease.userId !== userId) {
+                return res.status(403).json({ error: 'No tienes permisos para eliminar este release' });
+            }
+        }
+        
+        const release = await Release.findByIdAndDelete(id);
+        if (!release) {
+            return res.status(404).json({ error: 'Release no encontrado' });
+        }
+        res.status(200).json({ message: 'Release eliminado correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
     }
-    res.status(200).json({ message: 'Release eliminado correctamente' });
 };
 
 module.exports = {
