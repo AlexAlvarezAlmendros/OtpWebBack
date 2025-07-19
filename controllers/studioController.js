@@ -1,12 +1,49 @@
 const Studio = require('../models/Studio');
 const mongoose = require('mongoose');
 const { isUserAdmin } = require('../utils/authHelpers');
+const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
-// GET all studios
+// GET all studios with filtering
 const getStudios = async (req, res) => {
 	try {
-		const studios = await Studio.find({}).sort({ date: -1 });
-		res.status(200).json(studios);
+		// Validate filter parameters
+		const validation = validateFilters(req.query);
+		if (!validation.isValid) {
+			return res.status(400).json({ 
+				error: 'Invalid filter parameters', 
+				details: validation.errors 
+			});
+		}
+
+		// Build filter and options
+		const filter = buildFilter(req.query, FILTER_CONFIGS.studios);
+		const options = buildQueryOptions(req.query);
+
+		// Studios don't have a 'date' field, so we'll sort by createdAt
+		if (options.sort.date) {
+			options.sort = { createdAt: options.sort.date };
+		}
+
+		// Execute query with filters
+		const studios = await Studio.find(filter)
+			.sort(options.sort)
+			.limit(options.limit)
+			.skip(options.skip);
+
+		// Get total count for pagination info
+		const totalCount = await Studio.countDocuments(filter);
+
+		// Response with pagination metadata
+		res.status(200).json({
+			data: studios,
+			pagination: {
+				page: parseInt(req.query.page) || 1,
+				count: options.limit,
+				total: totalCount,
+				pages: Math.ceil(totalCount / options.limit)
+			},
+			filters: filter
+		});
 	} catch (error) {
 		res.status(500).json({ error: error.message });
 	}

@@ -1,12 +1,49 @@
 const Artist = require('../models/Artist');
 const mongoose = require('mongoose');
 const { isUserAdmin } = require('../utils/authHelpers');
+const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
-// GET all artists
+// GET all artists with filtering
 const getArtists = async (req, res) => {
     try {
-        const artists = await Artist.find({}).sort({ date: -1 });
-        res.status(200).json(artists);
+        // Validate filter parameters
+        const validation = validateFilters(req.query);
+        if (!validation.isValid) {
+            return res.status(400).json({ 
+                error: 'Invalid filter parameters', 
+                details: validation.errors 
+            });
+        }
+
+        // Build filter and options
+        const filter = buildFilter(req.query, FILTER_CONFIGS.artists);
+        const options = buildQueryOptions(req.query);
+
+        // Artists don't have a 'date' field, so we'll sort by createdAt
+        if (options.sort.date) {
+            options.sort = { createdAt: options.sort.date };
+        }
+
+        // Execute query with filters
+        const artists = await Artist.find(filter)
+            .sort(options.sort)
+            .limit(options.limit)
+            .skip(options.skip);
+
+        // Get total count for pagination info
+        const totalCount = await Artist.countDocuments(filter);
+
+        // Response with pagination metadata
+        res.status(200).json({
+            data: artists,
+            pagination: {
+                page: parseInt(req.query.page) || 1,
+                count: options.limit,
+                total: totalCount,
+                pages: Math.ceil(totalCount / options.limit)
+            },
+            filters: filter
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

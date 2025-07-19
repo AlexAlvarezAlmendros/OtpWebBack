@@ -1,12 +1,44 @@
 const Release = require('../models/Release');
 const mongoose = require('mongoose');
 const { isUserAdmin } = require('../utils/authHelpers');
+const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
-// GET all releases
+// GET all releases with filtering
 const getReleases = async (req, res) => {
     try {
-        const releases = await Release.find({}).sort({ date: -1 });
-        res.status(200).json(releases);
+        // Validate filter parameters
+        const validation = validateFilters(req.query);
+        if (!validation.isValid) {
+            return res.status(400).json({ 
+                error: 'Invalid filter parameters', 
+                details: validation.errors 
+            });
+        }
+
+        // Build filter and options
+        const filter = buildFilter(req.query, FILTER_CONFIGS.releases);
+        const options = buildQueryOptions(req.query);
+
+        // Execute query with filters
+        const releases = await Release.find(filter)
+            .sort(options.sort)
+            .limit(options.limit)
+            .skip(options.skip);
+
+        // Get total count for pagination info
+        const totalCount = await Release.countDocuments(filter);
+
+        // Response with pagination metadata
+        res.status(200).json({
+            data: releases,
+            pagination: {
+                page: parseInt(req.query.page) || 1,
+                count: options.limit,
+                total: totalCount,
+                pages: Math.ceil(totalCount / options.limit)
+            },
+            filters: filter
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

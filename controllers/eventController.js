@@ -1,12 +1,44 @@
 const Event = require('../models/Event');
 const mongoose = require('mongoose');
 const { isUserAdmin } = require('../utils/authHelpers');
+const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
-// GET all events
+// GET all events with filtering
 const getEvents = async (req, res) => {
     try {
-        const events = await Event.find({}).sort({ date: -1 });
-        res.status(200).json(events);
+        // Validate filter parameters
+        const validation = validateFilters(req.query);
+        if (!validation.isValid) {
+            return res.status(400).json({ 
+                error: 'Invalid filter parameters', 
+                details: validation.errors 
+            });
+        }
+
+        // Build filter and options
+        const filter = buildFilter(req.query, FILTER_CONFIGS.events);
+        const options = buildQueryOptions(req.query);
+
+        // Execute query with filters
+        const events = await Event.find(filter)
+            .sort(options.sort)
+            .limit(options.limit)
+            .skip(options.skip);
+
+        // Get total count for pagination info
+        const totalCount = await Event.countDocuments(filter);
+
+        // Response with pagination metadata
+        res.status(200).json({
+            data: events,
+            pagination: {
+                page: parseInt(req.query.page) || 1,
+                count: options.limit,
+                total: totalCount,
+                pages: Math.ceil(totalCount / options.limit)
+            },
+            filters: filter
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
