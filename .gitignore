@@ -129,3 +129,4 @@ test-server.js
 test-basic-auth.js
 .gitignore
 test-complete-release.js
+SPOTIFY_INTEGRATION_BACKEND.md
