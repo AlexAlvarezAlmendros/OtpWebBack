@@ -88,6 +88,7 @@ const createArtist = async (req, res) => {
 // UPDATE a artist
 const updateArtist = async (req, res) => {
     const { id } = req.params;
+    console.log('PUT/PATCH /artists/:id - req.body:', JSON.stringify(req.body, null, 2));
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ error: 'ID de artista no válido' });
     }

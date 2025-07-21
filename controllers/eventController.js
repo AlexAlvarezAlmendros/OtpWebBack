@@ -82,6 +82,7 @@ const createEvent = async (req, res) => {
 // UPDATE a event
 const updateEvent = async (req, res) => {
     const { id } = req.params;
+    console.log('PUT/PATCH /events/:id - req.body:', JSON.stringify(req.body, null, 2));
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ error: 'ID de evento no válido' });
     }
