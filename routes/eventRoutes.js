@@ -32,6 +32,14 @@ router.patch('/:id',
   updateEvent
 );
 
+// PUT (actualizar) un evento (requiere ser dueño o admin)
+router.put('/:id', 
+  checkJwt, 
+  checkPermissions(['write:events']), 
+  checkOwnership,
+  updateEvent
+);
+
 // DELETE un evento (requiere ser dueño o admin)
 router.delete('/:id', 
   checkJwt, 

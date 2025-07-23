@@ -83,7 +83,9 @@ const createRelease = async (req, res) => {
 // UPDATE a release
 const updateRelease = async (req, res) => {
     const { id } = req.params;
+    console.log('PUT/PATCH /releases/:id - req.body:', JSON.stringify(req.body, null, 2));
     if (!mongoose.Types.ObjectId.isValid(id)) {
+        console.log('ID de release no válido', id);
         return res.status(404).json({ error: 'ID de release no válido' });
     }
     

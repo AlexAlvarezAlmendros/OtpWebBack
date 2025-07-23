@@ -32,6 +32,14 @@ router.patch('/:id',
   updateStudio
 );
 
+// PUT (actualizar) un estudio (requiere ser dueño o admin)
+router.put('/:id', 
+  checkJwt, 
+  checkPermissions(['write:studios']), 
+  checkOwnership,
+  updateStudio
+);
+
 // DELETE un estudio (requiere ser dueño o admin)
 router.delete('/:id', 
   checkJwt, 

@@ -32,6 +32,14 @@ router.patch('/:id',
   updateArtist
 );
 
+// PUT (actualizar) un artista (requiere ser dueño o admin)
+router.put('/:id', 
+  checkJwt, 
+  checkPermissions(['write:artists']), 
+  checkOwnership,
+  updateArtist
+);
+
 // DELETE un artista (requiere ser dueño o admin)
 router.delete('/:id', 
   checkJwt, 

@@ -32,6 +32,14 @@ router.patch('/:id',
   updateRelease
 );
 
+// PUT (actualizar) un release (requiere ser dueño o admin)
+router.put('/:id', 
+  checkJwt, 
+  checkPermissions(['write:releases']), 
+  checkOwnership,
+  updateRelease
+);
+
 // DELETE un release (requiere ser dueño o admin)
 router.delete('/:id', 
   checkJwt, 

@@ -2,6 +2,41 @@
 
 Este documento proporciona detalles sobre los endpoints de la API para la aplicación OtpWebBack.
 
+## Configuración
+
+### Variables de Entorno
+
+Copia `.env.example` a `.env` y configura las siguientes variables:
+
+#### Configuración de Base de Datos
+- `MONGO_URI`: URI de conexión a MongoDB
+- `PORT`: Puerto del servidor (por defecto 5001)
+
+#### Configuración de Auth0
+- `AUTH0_DOMAIN`: Dominio de tu aplicación Auth0
+- `AUTH0_AUDIENCE`: Identificador de audiencia de la API
+- `AUTH0_CLIENT_ID`: ID del cliente Auth0
+- `AUTH0_CLIENT_SECRET`: Secret del cliente Auth0
+
+#### Configuración de Spotify API
+Para habilitar la integración con Spotify y el autocompletado de artistas:
+
+1. Ve a [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)
+2. Crea una nueva aplicación
+3. Obtén el Client ID y Client Secret
+4. Configura las siguientes variables:
+   - `SPOTIFY_CLIENT_ID`: Client ID de tu aplicación Spotify
+   - `SPOTIFY_CLIENT_SECRET`: Client Secret de tu aplicación Spotify
+   - `SPOTIFY_API_BASE_URL`: https://api.spotify.com/v1 (ya configurado)
+   - `SPOTIFY_TOKEN_URL`: https://accounts.spotify.com/api/token (ya configurado)
+
+### Instalación
+
+```bash
+npm install
+node index.js
+```
+
 ## URL Base
 Todos los endpoints están prefijados con `/api`.
 
@@ -89,6 +124,130 @@ La API proporciona operaciones CRUD estándar para los siguientes recursos:
 - Artists  
 - Events
 - Studios
+
+---
+
+## Integración con Spotify API
+
+La API incluye endpoints especiales para importar datos desde Spotify y autocompletar formularios.
+
+### Spotify Import Endpoints
+
+**Ruta Base**: `/api/spotify`
+
+| Método | Ruta           | Descripción                                    |
+|--------|----------------|------------------------------------------------|
+| POST   | `/artist-info` | Importar datos de artista desde Spotify       |
+| POST   | `/release-info`| Importar datos de release/álbum desde Spotify |
+
+#### Importar Artista desde Spotify
+
+**POST** `/api/spotify/artist-info`
+
+Importa información de un artista desde Spotify utilizando su URL.
+
+**Cuerpo de la Petición:**
+```json
+{
+  "url": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY"
+}
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "name": "Adele",
+    "genre": "pop, soul, british soul",
+    "img": "https://i.scdn.co/image/ab6761610000e5eb68f6e4db3fc6490c263d9f1e",
+    "spotifyLink": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY",
+    "instagramLink": "",
+    "twitterLink": "",
+    "youtubeLink": "",
+    "facebookLink": "",
+    "websiteLink": ""
+  },
+  "source": "spotify"
+}
+```
+
+#### Importar Release desde Spotify
+
+**POST** `/api/spotify/release-info`
+
+Importa información de un álbum o single desde Spotify utilizando su URL.
+
+**Cuerpo de la Petición:**
+```json
+{
+  "url": "https://open.spotify.com/album/1A2GTWGtFfWp7KSQTwWOyo"
+}
+```
+
+**Respuesta Exitosa (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "title": "25",
+    "subtitle": "",
+    "artist": "Adele",
+    "date": "2015-11-20T00:00:00.000Z",
+    "type": "Album",
+    "img": "https://i.scdn.co/image/ab67616d0000b273c33c9b88565486b0b5134b6e",
+    "spotifyLink": "https://open.spotify.com/album/1A2GTWGtFfWp7KSQTwWOyo",
+    "appleMusicLink": "",
+    "youtubeMusicLink": "",
+    "amazonMusicLink": "",
+    "deezerLink": "",
+    "soundcloudLink": ""
+  },
+  "source": "spotify",
+  "metadata": {
+    "totalTracks": 11,
+    "originalType": "album"
+  }
+}
+```
+
+#### Códigos de Error Spotify API
+
+| Código | Error | Descripción |
+|--------|-------|-------------|
+| `400` | `URL_REQUIRED` | La URL de Spotify es obligatoria |
+| `400` | `INVALID_URL_FORMAT` | La URL debe ser una cadena de texto |
+| `400` | `INVALID_DOMAIN` | La URL debe ser de spotify.com |
+| `400` | `INVALID_SPOTIFY_URL` | Formato de URL de Spotify inválido |
+| `400` | `INVALID_URL_TYPE` | La URL debe ser del tipo correcto (artista/álbum) |
+| `400` | `URL_TOO_LONG` | La URL es demasiado larga |
+| `401` | `SPOTIFY_AUTH_ERROR` | Error de autenticación con Spotify |
+| `404` | `ARTIST_NOT_FOUND` | Artista no encontrado en Spotify |
+| `404` | `RELEASE_NOT_FOUND` | Release no encontrado en Spotify |
+| `429` | `RATE_LIMIT_EXCEEDED` | Demasiadas solicitudes (máx 10/min) |
+| `500` | `SPOTIFY_API_ERROR` | Error interno de la API de Spotify |
+
+#### Ejemplos de Uso con cURL
+
+```bash
+# Importar artista
+curl -X POST https://tu-api.com/api/spotify/artist-info \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://open.spotify.com/artist/4dpARuHxo51G3z768sgnrY"}'
+
+# Importar álbum
+curl -X POST https://tu-api.com/api/spotify/release-info \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://open.spotify.com/album/1A2GTWGtFfWp7KSQTwWOyo"}'
+```
+
+#### Limitaciones y Consideraciones
+
+- **Rate Limiting**: Máximo 10 requests por minuto por IP
+- **Cache**: Los datos se almacenan en cache durante 1 hora
+- **Tipos de URL soportados**: Solo URLs de artistas y álbumes de Spotify
+- **Autenticación**: Requiere credenciales de Spotify configuradas en el servidor
+- **Mapeo de Tipos**: Singles se mapean como "Song", álbumes y compilaciones como "Album"
 
 ---
 
