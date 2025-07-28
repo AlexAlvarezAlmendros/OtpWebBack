@@ -8,6 +8,7 @@ const studioRoutes = require('./routes/studioRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
 const contactRoutes = require('./routes/contactRoutes');
+const newsletterRoutes = require('./routes/newsletterRoutes');
 
 const app = express();
 
@@ -52,6 +53,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/studios', studioRoutes);
 app.use('/api/spotify', spotifyRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/newsletter', newsletterRoutes);
 
 // Middleware de manejo de errores JWT
 app.use((err, req, res, next) => {
