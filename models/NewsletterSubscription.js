@@ -46,7 +46,6 @@ const newsletterSubscriptionSchema = new Schema({
 });
 
 // Índices para performance
-newsletterSubscriptionSchema.index({ email: 1 });
 newsletterSubscriptionSchema.index({ status: 1 });
 newsletterSubscriptionSchema.index({ subscribedAt: -1 });
 newsletterSubscriptionSchema.index({ createdAt: -1 });

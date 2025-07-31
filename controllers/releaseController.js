@@ -114,6 +114,56 @@ const updateRelease = async (req, res) => {
     }
 };
 
+// GET releases by artist name in subtitle
+const getReleasesByArtist = async (req, res) => {
+    try {
+        const { artist } = req.params;
+        
+        if (!artist) {
+            return res.status(400).json({ error: 'Nombre del artista es requerido' });
+        }
+
+        // Pagination parameters
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // Build filter to search for artist name in subtitle (case insensitive)
+        // This will match artist names even when separated by commas
+        const filter = {
+            subtitle: { 
+                $regex: new RegExp(artist.trim(), 'i') 
+            }
+        };
+
+        // Execute query with pagination
+        const releases = await Release.find(filter)
+            .sort({ date: -1 }) // Sort by date descending (newest first)
+            .limit(limit)
+            .skip(skip);
+
+        // Get total count for pagination info
+        const totalCount = await Release.countDocuments(filter);
+
+        // Response with pagination metadata
+        res.status(200).json({
+            data: releases,
+            pagination: {
+                page: page,
+                limit: limit,
+                total: totalCount,
+                pages: Math.ceil(totalCount / limit),
+                hasNext: page < Math.ceil(totalCount / limit),
+                hasPrev: page > 1
+            },
+            artist: artist,
+            message: totalCount === 0 ? `No se encontraron releases para el artista: ${artist}` : `Se encontraron ${totalCount} releases para el artista: ${artist}`
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // DELETE a release
 const deleteRelease = async (req, res) => {
     const { id } = req.params;
@@ -151,6 +201,7 @@ module.exports = {
     getRelease,
     createRelease,
     updateRelease,
-    deleteRelease
+    deleteRelease,
+    getReleasesByArtist
 };
 
