@@ -4,7 +4,8 @@ const {
     getRelease,
     createRelease,
     updateRelease,
-    deleteRelease
+    deleteRelease,
+    getReleasesByArtist
 } = require('../controllers/releaseController');
 const { checkJwt } = require('../middleware/auth');
 const { checkPermissions, checkOwnership } = require('../middleware/permissions');
@@ -13,6 +14,9 @@ const router = express.Router();
 
 // GET todos los releases (público)
 router.get('/', getReleases);
+
+// GET releases por nombre de artista en subtitle (público)
+router.get('/artist/:artist', getReleasesByArtist);
 
 // GET un solo release por ID (público)
 router.get('/:id', getRelease);
