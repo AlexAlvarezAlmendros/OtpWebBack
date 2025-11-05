@@ -18,7 +18,45 @@ const eventSchema = new Schema({
 		enum: ['Concert', 'Festival', 'Showcase', 'Party'] // Puedes definir los tipos permitidos
 	},
 	date: { type: Date, required: true },
-	userId: { type: String, required: true } // Podría ser un ObjectId si tienes una colección de Users
+	userId: { type: String, required: true }, // Podría ser un ObjectId si tienes una colección de Users
+	
+	// CAMPOS PARA SISTEMA DE TICKETS
+	ticketsEnabled: {
+		type: Boolean,
+		default: false
+	},
+	ticketPrice: {
+		type: Number,
+		default: 0,
+		min: 0
+	},
+	totalTickets: {
+		type: Number,
+		default: 0,
+		min: 0
+	},
+	availableTickets: {
+		type: Number,
+		default: 0,
+		min: 0
+	},
+	ticketsSold: {
+		type: Number,
+		default: 0,
+		min: 0
+	},
+	ticketCurrency: {
+		type: String,
+		default: 'EUR'
+	},
+	saleStartDate: {
+		type: Date,
+		default: null
+	},
+	saleEndDate: {
+		type: Date,
+		default: null
+	}
 }, {
 	timestamps: true // Esto añade createdAt y updatedAt automáticamente
 });
