@@ -9,6 +9,7 @@ const eventRoutes = require('./routes/eventRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
+const ticketRoutes = require('./routes/ticketRoutes');
 
 const app = express();
 
@@ -29,18 +30,24 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
+
+// IMPORTANTE: El webhook de Stripe necesita el body raw
+// Registrar la ruta del webhook ANTES de express.json()
+app.post('/api/tickets/webhook', 
+  express.raw({ type: 'application/json' }), 
+  require('./controllers/ticketController').handleWebhook
+);
+
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
 // Conexión a la base de datos
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5001;
 
+// Conectar a MongoDB
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('Conectado a MongoDB Atlas');
-        app.listen(PORT, () => {
-            console.log(`Servidor corriendo en el puerto: ${PORT}`);
-        });
     })
     .catch((error) => {
         console.error('Error de conexión a la base de datos:', error);
@@ -54,6 +61,7 @@ app.use('/api/studios', studioRoutes);
 app.use('/api/spotify', spotifyRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/tickets', ticketRoutes);
 
 // Middleware de manejo de errores JWT
 app.use((err, req, res, next) => {
@@ -82,3 +90,13 @@ app.use((err, req, res, next) => {
     });
   }
 });
+
+// Para desarrollo local
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto: ${PORT}`);
+  });
+}
+
+// Exportar para Vercel
+module.exports = app;
