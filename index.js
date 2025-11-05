@@ -29,18 +29,18 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
+
+
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
 // Conexión a la base de datos
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5001;
 
+// Conectar a MongoDB
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('Conectado a MongoDB Atlas');
-        app.listen(PORT, () => {
-            console.log(`Servidor corriendo en el puerto: ${PORT}`);
-        });
     })
     .catch((error) => {
         console.error('Error de conexión a la base de datos:', error);
@@ -82,3 +82,13 @@ app.use((err, req, res, next) => {
     });
   }
 });
+
+// Para desarrollo local
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto: ${PORT}`);
+  });
+}
+
+// Exportar para Vercel
+module.exports = app;
