@@ -45,6 +45,7 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5001;
 
 // Conectar a MongoDB
+// Conectar a MongoDB
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('Conectado a MongoDB Atlas');
@@ -90,6 +91,16 @@ app.use((err, req, res, next) => {
     });
   }
 });
+
+// Para desarrollo local
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor corriendo en el puerto: ${PORT}`);
+  });
+}
+
+// Exportar para Vercel
+module.exports = app;
 
 // Para desarrollo local
 if (require.main === module) {
