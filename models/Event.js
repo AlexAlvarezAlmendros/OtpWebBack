@@ -7,6 +7,7 @@ const eventSchema = new Schema({
 	// Si necesitas el UUID, podemos usar una librería como 'uuid'.
 	name: { type: String, required: true },
 	location: { type: String, required: true },
+	description: { type: String, required: false, default: '' },
 	colaborators: { type: String, required: false },
 	youtubeLink: { type: String, required: false },
 	instagramLink: { type: String, required: false },
