@@ -45,7 +45,6 @@ const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5001;
 
 // Conectar a MongoDB
-// Conectar a MongoDB
 mongoose.connect(MONGO_URI)
     .then(() => {
         console.log('Conectado a MongoDB Atlas');
