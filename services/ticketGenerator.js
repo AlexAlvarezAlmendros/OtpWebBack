@@ -29,7 +29,7 @@ function generateTicketCode() {
  */
 async function generateQRCode(validationCode, frontendUrl = process.env.FRONTEND_URL) {
   try {
-    const url = `${frontendUrl}/ticket/${validationCode}`;
+    const url = `https://www.otherpeople.es/ticket/${validationCode}`;
     const qrBase64 = await QRCode.toDataURL(url, {
       width: 300,
       margin: 2,
