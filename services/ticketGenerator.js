@@ -1,8 +1,16 @@
 const QRCode = require('qrcode');
 const PDFDocument = require('pdfkit');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs');
+
+/**
+ * Genera un UUID v4 compatible
+ * Alternativa a uuid para evitar problemas con ESM en Vercel
+ */
+function generateUUID() {
+  return crypto.randomUUID();
+}
 
 /**
  * Genera un código de ticket legible (TKT-XXXX-XXXX)
@@ -195,7 +203,7 @@ async function generateTicketPDF(ticket, event) {
  */
 async function generateTicketData(event, purchaseData, ticketNumber = 1) {
   try {
-    const validationCode = uuidv4();
+    const validationCode = generateUUID();
     const ticketCode = generateTicketCode();
     const qrCode = await generateQRCode(validationCode);
 
