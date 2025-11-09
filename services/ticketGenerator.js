@@ -29,7 +29,13 @@ function generateTicketCode() {
  */
 async function generateQRCode(validationCode, frontendUrl = process.env.FRONTEND_URL) {
   try {
-    const url = `https://www.otherpeople.es/ticket/${validationCode}`;
+    // Siempre usar la URL de producción para los QR codes
+    // Esto permite que los tickets funcionen incluso si se generan en desarrollo
+    const baseUrl = 'https://www.otherpeople.es';
+    
+    const url = `${baseUrl}/ticket/${validationCode}`;
+    console.log('🔗 Generating QR for URL:', url);
+    
     const qrBase64 = await QRCode.toDataURL(url, {
       width: 300,
       margin: 2,
