@@ -10,11 +10,26 @@ const spotifyRoutes = require('./routes/spotifyRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
+// IMPORTANTE: El webhook de Stripe necesita el body raw
+// Debe estar ANTES de cualquier middleware que procese el body
+app.post('/api/tickets/webhook', 
+  express.raw({ type: 'application/json' }), 
+  require('./controllers/ticketController').handleWebhook
+);
+
 // Middlewares
-// Logging de todas las requests
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL del frontend
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
+}));
+
+// Logging de todas las requests (después del webhook)
 app.use((req, res, next) => {
   console.log(`🌐 ${new Date().toISOString()} - ${req.method} ${req.path}`);
   console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
@@ -23,20 +38,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL del frontend
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
-}));
-
-// IMPORTANTE: El webhook de Stripe necesita el body raw
-// Registrar la ruta del webhook ANTES de express.json()
-app.post('/api/tickets/webhook', 
-  express.raw({ type: 'application/json' }), 
-  require('./controllers/ticketController').handleWebhook
-);
 
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
@@ -62,6 +63,7 @@ app.use('/api/spotify', spotifyRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/tickets', ticketRoutes);
+app.use('/api/users', userRoutes);
 
 // Middleware de manejo de errores JWT
 app.use((err, req, res, next) => {
@@ -90,16 +92,6 @@ app.use((err, req, res, next) => {
     });
   }
 });
-
-// Para desarrollo local
-if (require.main === module) {
-  app.listen(PORT, () => {
-    console.log(`Servidor corriendo en el puerto: ${PORT}`);
-  });
-}
-
-// Exportar para Vercel
-module.exports = app;
 
 // Para desarrollo local
 if (require.main === module) {

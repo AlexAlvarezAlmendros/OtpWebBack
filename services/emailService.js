@@ -231,6 +231,51 @@ Este es un email automático, por favor no respondas a este mensaje.
     }
 
     /**
+     * Envía el ticket por email al comprador con PDF adjunto
+     */
+    async sendTicketEmailWithPDF(ticket, event, pdfBuffer) {
+        try {
+            // Verificar que el transporter esté inicializado
+            if (!this.transporter) {
+                throw new Error('Email service not initialized. Please check Gmail configuration.');
+            }
+
+            const emailOptions = {
+                from: {
+                    name: process.env.EMAIL_FROM_NAME || 'Other People Records',
+                    address: process.env.EMAIL_FROM_ADDRESS || process.env.GMAIL_USER
+                },
+                to: ticket.customerEmail,
+                subject: `${ticket.purchaseQuantity > 1 ? 'Tus entradas' : 'Tu entrada'} para ${event.name}`,
+                html: this.generateTicketEmailTemplate(ticket, event.name, event),
+                text: this.generateTicketEmailText(ticket, event.name, event),
+                attachments: [
+                    {
+                        filename: `tickets-${event.name.replace(/[^a-z0-9]/gi, '-')}.pdf`,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf'
+                    }
+                ]
+            };
+
+            console.log('🎫 Sending ticket email with PDF to:', ticket.customerEmail);
+
+            const result = await this.transporter.sendMail(emailOptions);
+
+            console.log('✅ Ticket email with PDF sent successfully');
+            
+            return {
+                success: true,
+                result: result
+            };
+
+        } catch (error) {
+            console.error('❌ Error sending ticket email with PDF:', error.message);
+            throw new Error(`Failed to send ticket email: ${error.message}`);
+        }
+    }
+
+    /**
      * Envía el ticket por email al comprador
      */
     async sendTicketEmail(ticket, eventName, event) {
@@ -411,7 +456,7 @@ Este es un email automático, por favor no respondas a este mensaje.
                         </div>
                         <div class="info-row">
                             <span class="info-label">Cantidad:</span>
-                            <span class="info-value">${ticket.quantity} entrada(s)</span>
+                            <span class="info-value">${ticket.purchaseQuantity} entrada(s)</span>
                         </div>
                         <div class="info-row" style="border-bottom: none;">
                             <span class="info-label">Total Pagado:</span>
@@ -420,19 +465,27 @@ Este es un email automático, por favor no respondas a este mensaje.
                     </div>
 
                     <div class="qr-section">
-                        <h3 style="margin-top: 0;">🎫 Tu Código de Entrada</h3>
-                        <p>Presenta este código QR en la entrada del evento:</p>
-                        <img src="cid:qrcode" alt="QR Code" class="qr-code" />
-                        <div class="ticket-code">${ticket.ticketCode}</div>
-                        <p style="font-size: 14px; color: #666;">Guarda este email o toma una captura de pantalla</p>
+                        <h3 style="margin-top: 0;">🎫 ${ticket.purchaseQuantity > 1 ? 'Tus Entradas' : 'Tu Entrada'}</h3>
+                        <p>${ticket.purchaseQuantity > 1 
+                            ? `Hemos generado <strong>${ticket.purchaseQuantity} entradas individuales</strong> con códigos QR únicos.` 
+                            : 'Hemos generado tu entrada con un código QR único.'}</p>
+                        <p style="margin: 15px 0;">
+                            <strong>📎 Descarga el PDF adjunto</strong> - Contiene ${ticket.purchaseQuantity > 1 ? 'todas tus entradas' : 'tu entrada'} con ${ticket.purchaseQuantity > 1 ? 'sus' : 'su'} código${ticket.purchaseQuantity > 1 ? 's' : ''} QR.
+                        </p>
+                        ${ticket.purchaseQuantity > 1 ? `
+                        <p style="font-size: 14px; color: #666; background: #f0f0f0; padding: 10px; border-radius: 5px;">
+                            💡 <strong>Importante:</strong> Cada persona necesita su propia entrada. El PDF contiene ${ticket.purchaseQuantity} páginas, una por cada entrada.
+                        </p>
+                        ` : ''}
                     </div>
 
                     <div class="important-note">
                         <strong>⚠️ Importante:</strong>
                         <ul style="margin: 10px 0; padding-left: 20px;">
-                            <li>Este código es único y solo puede ser usado una vez</li>
-                            <li>Llega con antelación al evento para validar tu entrada</li>
-                            <li>No compartas este código con nadie</li>
+                            <li>Cada código QR es único y solo puede ser usado una vez</li>
+                            <li>Llega con antelación al evento para validar ${ticket.purchaseQuantity > 1 ? 'tus entradas' : 'tu entrada'}</li>
+                            <li>No compartas ${ticket.purchaseQuantity > 1 ? 'estos códigos' : 'este código'} con nadie</li>
+                            ${ticket.purchaseQuantity > 1 ? '<li>Puedes imprimir las entradas o mostrarlas desde tu móvil</li>' : ''}
                         </ul>
                     </div>
 
@@ -444,8 +497,8 @@ Este es un email automático, por favor no respondas a este mensaje.
                     <p><strong>Other People Records</strong></p>
                     <p>Este es un email automático con tu confirmación de compra.</p>
                     <p style="font-size: 12px; margin-top: 10px;">
-                        Ticket ID: ${ticket.ticketCode}<br>
-                        Fecha de compra: ${new Date(ticket.createdAt).toLocaleString('es-ES')}
+                        ${ticket.purchaseQuantity > 1 ? `Entradas: ${ticket.purchaseQuantity}` : `Ticket: ${ticket.ticketCode}`}<br>
+                        Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-ES') : new Date().toLocaleString('es-ES')}
                     </p>
                 </div>
             </div>
@@ -464,32 +517,38 @@ Este es un email automático, por favor no respondas a este mensaje.
 
 Hola ${ticket.customerName},
 
-Tu entrada para ${eventName} ha sido confirmada.
+Tu compra para ${eventName} ha sido confirmada.
 
 DETALLES DEL EVENTO:
 - Evento: ${eventName}
 - Fecha: ${eventDate}
 - Ubicación: ${eventLocation}
-- Cantidad: ${ticket.quantity} entrada(s)
+- Cantidad: ${ticket.purchaseQuantity} entrada(s)
 - Total pagado: ${ticket.totalAmount.toFixed(2)} ${ticket.currency}
 
-TU CÓDIGO DE ENTRADA:
-${ticket.ticketCode}
+${ticket.purchaseQuantity > 1 ? 'TUS ENTRADAS' : 'TU ENTRADA'}:
+${ticket.purchaseQuantity > 1 
+    ? `Hemos generado ${ticket.purchaseQuantity} entradas individuales con códigos QR únicos.`
+    : 'Hemos generado tu entrada con un código QR único.'}
 
-Presenta este código en la entrada del evento.
-Puedes escanear el código QR adjunto o mostrar el código de texto.
+📎 DESCARGA EL PDF ADJUNTO - Contiene ${ticket.purchaseQuantity > 1 ? 'todas tus entradas' : 'tu entrada'}.
 
-IMPORTANTE:
-- Este código es único y solo puede ser usado una vez
-- Llega con antelación al evento para validar tu entrada
-- No compartas este código con nadie
+${ticket.purchaseQuantity > 1 
+    ? `IMPORTANTE: Cada persona necesita su propia entrada. El PDF contiene ${ticket.purchaseQuantity} páginas.`
+    : ''}
+
+⚠️ IMPORTANTE:
+- Cada código QR es único y solo puede ser usado una vez
+- Llega con antelación para validar ${ticket.purchaseQuantity > 1 ? 'tus entradas' : 'tu entrada'}
+- No compartas ${ticket.purchaseQuantity > 1 ? 'estos códigos' : 'este código'} con nadie
+${ticket.purchaseQuantity > 1 ? '- Puedes imprimir las entradas o mostrarlas desde tu móvil' : ''}
 
 ¡Nos vemos en el evento!
 
 ---
 Other People Records
-Ticket ID: ${ticket.ticketCode}
-Fecha de compra: ${new Date(ticket.createdAt).toLocaleString('es-ES')}
+${ticket.purchaseQuantity > 1 ? `Entradas: ${ticket.purchaseQuantity}` : `Ticket: ${ticket.ticketCode}`}
+Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-ES') : new Date().toLocaleString('es-ES')}
         `.trim();
     }
 }

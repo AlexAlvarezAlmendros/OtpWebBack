@@ -10,8 +10,14 @@ const ticketSchema = new Schema({
 	},
 	purchaseId: {
 		type: String,  // ID de la compra (Stripe Session ID)
+		required: true
+	},
+	// Código único de validación (UUID v4) - ÚNICO POR ENTRADA
+	validationCode: {
+		type: String,
 		required: true,
-		unique: true
+		unique: true,
+		index: true
 	},
 	customerEmail: {
 		type: String,
@@ -21,7 +27,14 @@ const ticketSchema = new Schema({
 		type: String,
 		required: true
 	},
-	quantity: {
+	// Cantidad total de la compra (para referencia)
+	purchaseQuantity: {
+		type: Number,
+		required: true,
+		min: 1
+	},
+	// Número de esta entrada específica (ej: 1 de 3)
+	ticketNumber: {
 		type: Number,
 		required: true,
 		min: 1
@@ -36,7 +49,7 @@ const ticketSchema = new Schema({
 	},
 	status: {
 		type: String,
-		enum: ['pending', 'completed', 'cancelled', 'refunded'],
+		enum: ['pending', 'completed', 'cancelled', 'refunded', 'active', 'validated'],
 		default: 'pending'
 	},
 	ticketCode: {
@@ -54,6 +67,20 @@ const ticketSchema = new Schema({
 	validatedAt: {
 		type: Date,
 		default: null
+	},
+	validatedBy: {
+		type: mongoose.Schema.Types.ObjectId,
+		ref: 'User',
+		default: null
+	},
+	// Seguridad y auditoría
+	validationAttempts: {
+		type: Number,
+		default: 0
+	},
+	lastAttemptAt: {
+		type: Date,
+		default: null
 	}
 }, {
 	timestamps: true
@@ -63,6 +90,9 @@ const ticketSchema = new Schema({
 ticketSchema.index({ eventId: 1, status: 1 });
 ticketSchema.index({ customerEmail: 1 });
 ticketSchema.index({ ticketCode: 1 });
+ticketSchema.index({ validationCode: 1 });
+ticketSchema.index({ eventId: 1, validated: 1 });
+ticketSchema.index({ purchaseId: 1, ticketNumber: 1 }); // Nuevo índice para tickets individuales
 
 const Ticket = mongoose.model('Ticket', ticketSchema);
 

@@ -26,6 +26,11 @@ const eventSchema = new Schema({
 		type: Boolean,
 		default: false
 	},
+	externalTicketUrl: {
+		type: String,
+		default: '',
+		required: false
+	},
 	ticketPrice: {
 		type: Number,
 		default: 0,
