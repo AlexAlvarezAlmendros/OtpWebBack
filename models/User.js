@@ -7,8 +7,8 @@ const userSchema = new Schema({
   auth0Id: {
     type: String,
     required: true,
-    unique: true,
-    index: true
+    unique: true
+    // index: true eliminado - ya se crea con unique: true
   },
   
   // Información básica
@@ -16,6 +16,7 @@ const userSchema = new Schema({
     type: String,
     required: true,
     unique: true
+    // index: true eliminado - ya se crea con unique: true
   },
   
   name: {
@@ -51,8 +52,7 @@ const userSchema = new Schema({
 });
 
 // Índices
-userSchema.index({ auth0Id: 1 });
-userSchema.index({ email: 1 });
+// auth0Id y email ya tienen índice por unique: true
 userSchema.index({ role: 1 });
 
 const User = mongoose.model('User', userSchema);

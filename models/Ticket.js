@@ -16,8 +16,8 @@ const ticketSchema = new Schema({
 	validationCode: {
 		type: String,
 		required: true,
-		unique: true,
-		index: true
+		unique: true
+		// index: true eliminado - ya se crea con unique: true
 	},
 	customerEmail: {
 		type: String,
@@ -89,8 +89,8 @@ const ticketSchema = new Schema({
 // Índices para optimizar búsquedas
 ticketSchema.index({ eventId: 1, status: 1 });
 ticketSchema.index({ customerEmail: 1 });
-ticketSchema.index({ ticketCode: 1 });
-ticketSchema.index({ validationCode: 1 });
+// ticketCode ya tiene índice por unique: true
+// validationCode ya tiene índice por unique: true
 ticketSchema.index({ eventId: 1, validated: 1 });
 ticketSchema.index({ purchaseId: 1, ticketNumber: 1 }); // Nuevo índice para tickets individuales
 
