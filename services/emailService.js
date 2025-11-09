@@ -229,6 +229,328 @@ Normalmente respondemos en un plazo de 24-48 horas durante días laborables.
 Este es un email automático, por favor no respondas a este mensaje.
         `.trim();
     }
+
+    /**
+     * Envía el ticket por email al comprador con PDF adjunto
+     */
+    async sendTicketEmailWithPDF(ticket, event, pdfBuffer) {
+        try {
+            // Verificar que el transporter esté inicializado
+            if (!this.transporter) {
+                throw new Error('Email service not initialized. Please check Gmail configuration.');
+            }
+
+            const emailOptions = {
+                from: {
+                    name: process.env.EMAIL_FROM_NAME || 'Other People Records',
+                    address: process.env.EMAIL_FROM_ADDRESS || process.env.GMAIL_USER
+                },
+                to: ticket.customerEmail,
+                subject: `${ticket.purchaseQuantity > 1 ? 'Tus entradas' : 'Tu entrada'} para ${event.name}`,
+                html: this.generateTicketEmailTemplate(ticket, event.name, event),
+                text: this.generateTicketEmailText(ticket, event.name, event),
+                attachments: [
+                    {
+                        filename: `tickets-${event.name.replace(/[^a-z0-9]/gi, '-')}.pdf`,
+                        content: pdfBuffer,
+                        contentType: 'application/pdf'
+                    }
+                ]
+            };
+
+            console.log('🎫 Sending ticket email with PDF to:', ticket.customerEmail);
+
+            const result = await this.transporter.sendMail(emailOptions);
+
+            console.log('✅ Ticket email with PDF sent successfully');
+            
+            return {
+                success: true,
+                result: result
+            };
+
+        } catch (error) {
+            console.error('❌ Error sending ticket email with PDF:', error.message);
+            throw new Error(`Failed to send ticket email: ${error.message}`);
+        }
+    }
+
+    /**
+     * Envía el ticket por email al comprador
+     */
+    async sendTicketEmail(ticket, eventName, event) {
+        try {
+            // Verificar que el transporter esté inicializado
+            if (!this.transporter) {
+                throw new Error('Email service not initialized. Please check Gmail configuration.');
+            }
+
+            const emailOptions = {
+                from: {
+                    name: process.env.EMAIL_FROM_NAME || 'Other People Records',
+                    address: process.env.EMAIL_FROM_ADDRESS || process.env.GMAIL_USER
+                },
+                to: ticket.customerEmail,
+                subject: `Tu entrada para ${eventName}`,
+                html: this.generateTicketEmailTemplate(ticket, eventName, event),
+                text: this.generateTicketEmailText(ticket, eventName, event),
+                attachments: [{
+                    filename: 'ticket-qr.png',
+                    content: ticket.qrCode.split('base64,')[1],
+                    encoding: 'base64',
+                    cid: 'qrcode'
+                }]
+            };
+
+            console.log('🎫 Sending ticket email to:', ticket.customerEmail);
+
+            const result = await this.transporter.sendMail(emailOptions);
+
+            console.log('✅ Ticket email sent successfully');
+            
+            return {
+                success: true,
+                result: result
+            };
+
+        } catch (error) {
+            console.error('❌ Error sending ticket email:', error.message);
+            throw new Error(`Failed to send ticket email: ${error.message}`);
+        }
+    }
+
+    generateTicketEmailTemplate(ticket, eventName, event) {
+        const eventDate = event && event.date ? new Date(event.date).toLocaleDateString('es-ES', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }) : 'Fecha por confirmar';
+
+        const eventLocation = event && event.location ? event.location : 'Ubicación por confirmar';
+
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Tu entrada para ${eventName}</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    line-height: 1.6; 
+                    color: #333; 
+                    background-color: #f4f4f4;
+                }
+                .container { 
+                    max-width: 600px; 
+                    margin: 20px auto; 
+                    background: white;
+                    border-radius: 10px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                }
+                .header { 
+                    background: linear-gradient(135deg, #ff003c 0%, #cc0030 100%);
+                    color: white; 
+                    padding: 30px 20px; 
+                    text-align: center; 
+                }
+                .header h1 {
+                    margin: 0;
+                    font-size: 24px;
+                }
+                .content { 
+                    padding: 30px 20px; 
+                }
+                .ticket-info {
+                    background: #f9f9f9;
+                    border-left: 4px solid #ff003c;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    margin: 10px 0;
+                    padding: 10px 0;
+                    border-bottom: 1px solid #eee;
+                }
+                .info-label {
+                    font-weight: bold;
+                    color: #555;
+                }
+                .info-value {
+                    color: #333;
+                }
+                .qr-section {
+                    text-align: center;
+                    margin: 30px 0;
+                    padding: 20px;
+                    background: #fff;
+                    border: 2px dashed #ff003c;
+                    border-radius: 10px;
+                }
+                .qr-code {
+                    max-width: 250px;
+                    margin: 20px auto;
+                }
+                .ticket-code {
+                    font-size: 18px;
+                    font-weight: bold;
+                    color: #ff003c;
+                    letter-spacing: 2px;
+                    margin: 15px 0;
+                }
+                .important-note {
+                    background: #fff3cd;
+                    border: 1px solid #ffc107;
+                    padding: 15px;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                }
+                .footer { 
+                    text-align: center; 
+                    padding: 20px; 
+                    background: #f9f9f9;
+                    color: #666; 
+                    font-size: 14px; 
+                }
+                .btn {
+                    display: inline-block;
+                    padding: 12px 30px;
+                    background: #ff003c;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 5px;
+                    margin: 20px 0;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎉 ¡Gracias por tu compra!</h1>
+                    <p style="margin: 10px 0 0 0; font-size: 16px;">Tu entrada está confirmada</p>
+                </div>
+                
+                <div class="content">
+                    <p>Hola <strong>${ticket.customerName}</strong>,</p>
+                    <p>¡Estamos emocionados de verte en el evento! Tu compra ha sido confirmada exitosamente.</p>
+
+                    <div class="ticket-info">
+                        <h2 style="margin-top: 0; color: #ff003c;">📋 Detalles del Evento</h2>
+                        <div class="info-row">
+                            <span class="info-label">Evento:</span>
+                            <span class="info-value">${eventName}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Fecha:</span>
+                            <span class="info-value">${eventDate}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Ubicación:</span>
+                            <span class="info-value">${eventLocation}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Cantidad:</span>
+                            <span class="info-value">${ticket.purchaseQuantity} entrada(s)</span>
+                        </div>
+                        <div class="info-row" style="border-bottom: none;">
+                            <span class="info-label">Total Pagado:</span>
+                            <span class="info-value"><strong>${ticket.totalAmount.toFixed(2)} ${ticket.currency}</strong></span>
+                        </div>
+                    </div>
+
+                    <div class="qr-section">
+                        <h3 style="margin-top: 0;">🎫 ${ticket.purchaseQuantity > 1 ? 'Tus Entradas' : 'Tu Entrada'}</h3>
+                        <p>${ticket.purchaseQuantity > 1 
+                            ? `Hemos generado <strong>${ticket.purchaseQuantity} entradas individuales</strong> con códigos QR únicos.` 
+                            : 'Hemos generado tu entrada con un código QR único.'}</p>
+                        <p style="margin: 15px 0;">
+                            <strong>📎 Descarga el PDF adjunto</strong> - Contiene ${ticket.purchaseQuantity > 1 ? 'todas tus entradas' : 'tu entrada'} con ${ticket.purchaseQuantity > 1 ? 'sus' : 'su'} código${ticket.purchaseQuantity > 1 ? 's' : ''} QR.
+                        </p>
+                        ${ticket.purchaseQuantity > 1 ? `
+                        <p style="font-size: 14px; color: #666; background: #f0f0f0; padding: 10px; border-radius: 5px;">
+                            💡 <strong>Importante:</strong> Cada persona necesita su propia entrada. El PDF contiene ${ticket.purchaseQuantity} páginas, una por cada entrada.
+                        </p>
+                        ` : ''}
+                    </div>
+
+                    <div class="important-note">
+                        <strong>⚠️ Importante:</strong>
+                        <ul style="margin: 10px 0; padding-left: 20px;">
+                            <li>Cada código QR es único y solo puede ser usado una vez</li>
+                            <li>Llega con antelación al evento para validar ${ticket.purchaseQuantity > 1 ? 'tus entradas' : 'tu entrada'}</li>
+                            <li>No compartas ${ticket.purchaseQuantity > 1 ? 'estos códigos' : 'este código'} con nadie</li>
+                            ${ticket.purchaseQuantity > 1 ? '<li>Puedes imprimir las entradas o mostrarlas desde tu móvil</li>' : ''}
+                        </ul>
+                    </div>
+
+                    <p>Si tienes alguna pregunta, no dudes en contactarnos.</p>
+                    <p><strong>¡Nos vemos en el evento!</strong></p>
+                </div>
+
+                <div class="footer">
+                    <p><strong>Other People Records</strong></p>
+                    <p>Este es un email automático con tu confirmación de compra.</p>
+                    <p style="font-size: 12px; margin-top: 10px;">
+                        ${ticket.purchaseQuantity > 1 ? `Entradas: ${ticket.purchaseQuantity}` : `Ticket: ${ticket.ticketCode}`}<br>
+                        Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-ES') : new Date().toLocaleString('es-ES')}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    generateTicketEmailText(ticket, eventName, event) {
+        const eventDate = event && event.date ? new Date(event.date).toLocaleDateString('es-ES') : 'Fecha por confirmar';
+        const eventLocation = event && event.location ? event.location : 'Ubicación por confirmar';
+
+        return `
+¡GRACIAS POR TU COMPRA!
+========================
+
+Hola ${ticket.customerName},
+
+Tu compra para ${eventName} ha sido confirmada.
+
+DETALLES DEL EVENTO:
+- Evento: ${eventName}
+- Fecha: ${eventDate}
+- Ubicación: ${eventLocation}
+- Cantidad: ${ticket.purchaseQuantity} entrada(s)
+- Total pagado: ${ticket.totalAmount.toFixed(2)} ${ticket.currency}
+
+${ticket.purchaseQuantity > 1 ? 'TUS ENTRADAS' : 'TU ENTRADA'}:
+${ticket.purchaseQuantity > 1 
+    ? `Hemos generado ${ticket.purchaseQuantity} entradas individuales con códigos QR únicos.`
+    : 'Hemos generado tu entrada con un código QR único.'}
+
+📎 DESCARGA EL PDF ADJUNTO - Contiene ${ticket.purchaseQuantity > 1 ? 'todas tus entradas' : 'tu entrada'}.
+
+${ticket.purchaseQuantity > 1 
+    ? `IMPORTANTE: Cada persona necesita su propia entrada. El PDF contiene ${ticket.purchaseQuantity} páginas.`
+    : ''}
+
+⚠️ IMPORTANTE:
+- Cada código QR es único y solo puede ser usado una vez
+- Llega con antelación para validar ${ticket.purchaseQuantity > 1 ? 'tus entradas' : 'tu entrada'}
+- No compartas ${ticket.purchaseQuantity > 1 ? 'estos códigos' : 'este código'} con nadie
+${ticket.purchaseQuantity > 1 ? '- Puedes imprimir las entradas o mostrarlas desde tu móvil' : ''}
+
+¡Nos vemos en el evento!
+
+---
+Other People Records
+${ticket.purchaseQuantity > 1 ? `Entradas: ${ticket.purchaseQuantity}` : `Ticket: ${ticket.ticketCode}`}
+Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-ES') : new Date().toLocaleString('es-ES')}
+        `.trim();
+    }
 }
 
 module.exports = EmailService;

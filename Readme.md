@@ -30,6 +30,25 @@ Para habilitar la integración con Spotify y el autocompletado de artistas:
    - `SPOTIFY_API_BASE_URL`: https://api.spotify.com/v1 (ya configurado)
    - `SPOTIFY_TOKEN_URL`: https://accounts.spotify.com/api/token (ya configurado)
 
+#### Configuración de Stripe (Sistema de Tickets)
+Para habilitar el sistema de venta de entradas con Stripe:
+
+1. Crea una cuenta en [Stripe](https://stripe.com)
+2. Obtén tus claves API desde el Dashboard
+3. Configura las siguientes variables:
+   - `STRIPE_SECRET_KEY`: Secret key de Stripe (sk_test_...)
+   - `STRIPE_PUBLISHABLE_KEY`: Publishable key de Stripe (pk_test_...)
+   - `STRIPE_WEBHOOK_SECRET`: Secret del webhook (whsec_...)
+
+📖 **Para más detalles sobre el sistema de tickets, consulta [TICKETS_SYSTEM.md](./TICKETS_SYSTEM.md)**
+
+#### Configuración de Email
+Para el envío de tickets y confirmaciones por email:
+   - `GMAIL_USER`: Tu email de Gmail
+   - `GMAIL_APP_PASSWORD`: Contraseña de aplicación de Gmail
+   - `EMAIL_FROM_NAME`: Nombre del remitente (opcional)
+   - `EMAIL_FROM_ADDRESS`: Email del remitente (opcional)
+
 ### Instalación
 
 ```bash
@@ -124,6 +143,44 @@ La API proporciona operaciones CRUD estándar para los siguientes recursos:
 - Artists  
 - Events
 - Studios
+- **Tickets** (Sistema de venta de entradas con Stripe)
+
+---
+
+## Sistema de Tickets 🎫
+
+La API incluye un sistema completo de venta de entradas para eventos con integración de Stripe Checkout.
+
+### Endpoints de Tickets
+
+**Ruta Base**: `/api/tickets`
+
+| Método | Ruta                          | Auth   | Descripción                                    |
+|--------|-------------------------------|--------|------------------------------------------------|
+| POST   | `/create-checkout-session`    | No     | Crear sesión de pago con Stripe                |
+| POST   | `/webhook`                    | No*    | Webhook de Stripe (verificado por firma)       |
+| GET    | `/verify/:ticketCode`         | No     | Verificar validez de un ticket                 |
+| POST   | `/validate/:ticketCode`       | Admin  | Marcar ticket como usado                       |
+| GET    | `/my-tickets`                 | User   | Obtener tickets del usuario                    |
+| GET    | `/event/:eventId/sales`       | Admin  | Estadísticas de ventas del evento              |
+
+*El webhook está protegido por verificación de firma de Stripe
+
+### Ejemplo: Crear Sesión de Checkout
+
+```bash
+POST /api/tickets/create-checkout-session
+Content-Type: application/json
+
+{
+  "eventId": "507f1f77bcf86cd799439011",
+  "quantity": 2,
+  "customerEmail": "usuario@ejemplo.com",
+  "customerName": "Juan Pérez"
+}
+```
+
+📖 **Para documentación completa del sistema de tickets, consulta [TICKETS_SYSTEM.md](./TICKETS_SYSTEM.md)**
 
 ---
 
@@ -359,9 +416,20 @@ curl -X POST https://tu-api.com/api/spotify/release-info \
   "detailpageUrl": "URL de la página de detalles (opcional)",
   "eventType": "Concert",
   "date": "2025-07-16T00:00:00.000Z",
-  "userId": "user123"
+  "userId": "user123",
+  
+  "ticketsEnabled": false,
+  "ticketPrice": 15.00,
+  "totalTickets": 100,
+  "availableTickets": 100,
+  "ticketsSold": 0,
+  "ticketCurrency": "EUR",
+  "saleStartDate": "2025-01-15T00:00:00.000Z",
+  "saleEndDate": "2025-02-15T23:59:59.000Z"
 }
 ```
+
+**Nota**: Los campos de tickets son opcionales. Si no se proporcionan, el evento no tendrá venta de entradas habilitada.
 
 ### Studios
 

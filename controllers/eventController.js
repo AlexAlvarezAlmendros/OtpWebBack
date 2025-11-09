@@ -72,6 +72,25 @@ const createEvent = async (req, res) => {
             userId: userId // Asegurar que el userId viene del token
         };
         
+        // Validación condicional: si ticketsEnabled y NO hay URL externa
+        if (eventData.ticketsEnabled && !eventData.externalTicketUrl) {
+            // Para entradas internas (Stripe), validar campos requeridos
+            if (!eventData.ticketPrice || eventData.ticketPrice <= 0) {
+                return res.status(400).json({ 
+                    error: 'Para entradas internas, ticketPrice debe ser mayor a 0' 
+                });
+            }
+            if (!eventData.totalTickets || eventData.totalTickets <= 0) {
+                return res.status(400).json({ 
+                    error: 'Para entradas internas, totalTickets debe ser mayor a 0' 
+                });
+            }
+            // Inicializar availableTickets si no está definido
+            if (eventData.availableTickets === undefined) {
+                eventData.availableTickets = eventData.totalTickets;
+            }
+        }
+        
         const event = await Event.create(eventData);
         res.status(201).json(event);
     } catch (error) {
@@ -100,6 +119,21 @@ const updateEvent = async (req, res) => {
             }
             if (existingEvent.userId !== userId) {
                 return res.status(403).json({ error: 'No tienes permisos para modificar este evento' });
+            }
+        }
+        
+        // Validación condicional: si ticketsEnabled y NO hay URL externa
+        if (req.body.ticketsEnabled && !req.body.externalTicketUrl) {
+            // Para entradas internas (Stripe), validar campos requeridos si se están actualizando
+            if (req.body.ticketPrice !== undefined && req.body.ticketPrice <= 0) {
+                return res.status(400).json({ 
+                    error: 'Para entradas internas, ticketPrice debe ser mayor a 0' 
+                });
+            }
+            if (req.body.totalTickets !== undefined && req.body.totalTickets <= 0) {
+                return res.status(400).json({ 
+                    error: 'Para entradas internas, totalTickets debe ser mayor a 0' 
+                });
             }
         }
         
