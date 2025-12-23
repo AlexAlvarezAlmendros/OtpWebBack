@@ -33,18 +33,20 @@ const checkPermissions = (requiredPermissions) => {
             'read:releases', 'write:releases', 'delete:releases',
             'read:artists', 'write:artists', 'delete:artists',
             'read:events', 'write:events', 'delete:events',
-            'read:studios', 'write:studios', 'delete:studios'
+            'read:studios', 'write:studios', 'delete:studios',
+            'read:beats', 'write:beats', 'delete:beats'
           ];
         } else if (userRoles.includes('Editor') || userRoles.includes('editor')) {
           mappedPermissions = [
             'read:releases', 'write:releases',
             'read:artists', 'write:artists',
             'read:events', 'write:events',
-            'read:studios', 'write:studios'
+            'read:studios', 'write:studios',
+            'read:beats', 'write:beats'
           ];
         } else if (userRoles.includes('User') || userRoles.includes('user')) {
           mappedPermissions = [
-            'read:releases', 'read:artists', 'read:events', 'read:studios'
+            'read:releases', 'read:artists', 'read:events', 'read:studios', 'read:beats'
           ];
         }
         

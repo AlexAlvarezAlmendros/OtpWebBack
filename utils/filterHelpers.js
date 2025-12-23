@@ -137,6 +137,10 @@ const FILTER_CONFIGS = {
     studios: {
         typeField: 'studioType',
         location: 'location'
+    },
+    beats: {
+        genre: 'genre',
+        key: 'key'
     }
 };
 

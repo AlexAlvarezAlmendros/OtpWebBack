@@ -1,4 +1,14 @@
 const nodemailer = require('nodemailer');
+// Configurar Babel para soportar JSX en tiempo de ejecución
+require('@babel/register')({
+  presets: ['@babel/preset-env', '@babel/preset-react'],
+  extensions: ['.js', '.jsx']
+});
+const React = require('react');
+const { render } = require('@react-email/render');
+const NewsletterEmail = require('../emails/NewsletterEmail').default;
+const BeatPurchaseEmail = require('../emails/BeatPurchaseEmail').default;
+
 
 class EmailService {
     constructor() {
@@ -549,6 +559,393 @@ ${ticket.purchaseQuantity > 1 ? '- Puedes imprimir las entradas o mostrarlas des
 Other People Records
 ${ticket.purchaseQuantity > 1 ? `Entradas: ${ticket.purchaseQuantity}` : `Ticket: ${ticket.ticketCode}`}
 Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString('es-ES') : new Date().toLocaleString('es-ES')}
+        `.trim();
+    }
+
+    /**
+     * Send Newsletter Email
+     */
+    async sendNewsletter(newsletter) {
+        try {
+            if (!this.transporter) {
+                console.warn('⚠️ Email service not initialized. Skipping newsletter send.');
+                return; 
+            }
+
+            // In a real scenario, you'd fetch all subscribers here.
+            // For now, we mock valid subscribers or send to a test list/admin.
+            const NewsletterSubscription = require('../models/NewsletterSubscription');
+            const subscribers = await NewsletterSubscription.find({ status: 'active' });
+            
+            if (subscribers.length === 0) {
+                console.log('0️⃣ No active subscribers found.');
+                return;
+            }
+            
+            console.log(`📨 Preparing to send newsletter "${newsletter.title}" to ${subscribers.length} subscribers...`);
+
+            // Send in batches or loop (Nodemailer is not a bulk sender service, be careful with limits)
+            // For MVP/Demo: loop
+            // Ideally use a dedicated service like SendGrid/Resend API directly, but user asked for Nodemailer.
+            
+            const results = { success: 0, failed: 0 };
+            
+            // Limit to first 5 for safety during testing if massive list, or all if small.
+            // Assuming small list for now.
+            for (const sub of subscribers) {
+                 try {
+                     // Generate personalized HTML for each subscriber with their unsubscribe token
+                     const emailHtml = await render(
+                         React.createElement(NewsletterEmail, { 
+                             newsletter,
+                             subscriberEmail: sub.email,
+                             unsubscribeToken: sub.confirmationToken || sub._id.toString()
+                         })
+                     );
+                     
+                     await this.transporter.sendMail({
+                         from: {
+                             name: process.env.EMAIL_FROM_NAME || 'Other People Records',
+                             address: process.env.EMAIL_FROM_ADDRESS || process.env.GMAIL_USER
+                         },
+                         to: sub.email,
+                         subject: newsletter.title,
+                         html: emailHtml,
+                     });
+                     results.success++;
+                 } catch (err) {
+                     console.error(`❌ Failed to send to ${sub.email}:`, err.message);
+                     results.failed++;
+                 }
+            }
+            
+            console.log(`✅ Newsletter sent. Success: ${results.success}, Failed: ${results.failed}`);
+            return results;
+
+        } catch (error) {
+             console.error('❌ Error sending newsletter batch:', error);
+             throw error;
+        }
+    }
+
+    /**
+     * Send Beat Delivery Email with download links
+     */
+    async sendBeatDeliveryEmail({ to, customerName, beatTitle, licenseName, formats, files, licenseTerms }) {
+        try {
+            if (!this.transporter) {
+                throw new Error('Email service not initialized. Please check Gmail configuration.');
+            }
+
+            console.log('🎵 Sending beat delivery email to:', to);
+            console.log('   Beat:', beatTitle);
+            console.log('   License:', licenseName);
+            console.log('   Formats:', formats.join(', '));
+
+            // Generate HTML using React Email template
+            const emailHtml = await render(
+                React.createElement(BeatPurchaseEmail, {
+                    customerName,
+                    beatTitle,
+                    licenseName,
+                    formats,
+                    files,
+                    licenseTerms
+                })
+            );
+
+            const emailOptions = {
+                from: {
+                    name: process.env.EMAIL_FROM_NAME || 'OTP Records',
+                    address: process.env.EMAIL_FROM_ADDRESS || process.env.GMAIL_USER
+                },
+                to: to,
+                subject: `Tu compra: ${beatTitle} - ${licenseName}`,
+                html: emailHtml,
+                text: this.generateBeatDeliveryText(customerName, beatTitle, licenseName, formats, files, licenseTerms)
+            };
+
+            const result = await this.transporter.sendMail(emailOptions);
+            
+            console.log('✅ Beat delivery email sent successfully');
+            
+            return {
+                success: true,
+                result: result
+            };
+
+        } catch (error) {
+            console.error('❌ Error sending beat delivery email:', error.message);
+            throw new Error(`Failed to send beat delivery email: ${error.message}`);
+        }
+    }
+
+    generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms) {
+        // Format license terms for display
+        const formatTerm = (value) => {
+            if (value === 'unlimited' || value === 0 || value === '0') {
+                return 'Ilimitado';
+            }
+            return value;
+        };
+
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Tu compra de beat - OTP Records</title>
+            <style>
+                body { 
+                    font-family: Arial, sans-serif; 
+                    background-color: #0a0a0a; 
+                    color: #ffffff; 
+                    margin: 0;
+                    padding: 20px;
+                }
+                .container {
+                    max-width: 600px; 
+                    margin: 0 auto; 
+                    background-color: #1a1a1a; 
+                    border-radius: 12px; 
+                    overflow: hidden;
+                    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+                }
+                .header {
+                    background: linear-gradient(135deg, #ff003c 0%, #cc0030 100%);
+                    padding: 40px 20px;
+                    text-align: center;
+                }
+                .header h1 {
+                    color: #ffffff;
+                    margin: 0;
+                    font-size: 28px;
+                }
+                .content {
+                    padding: 40px;
+                }
+                .beat-details {
+                    background-color: #0e0e0e;
+                    border: 1px solid #333;
+                    border-radius: 8px;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+                .beat-details h2 {
+                    color: #ff003c;
+                    margin-top: 0;
+                    font-size: 22px;
+                }
+                .detail-row {
+                    margin: 10px 0;
+                    padding: 8px 0;
+                    border-bottom: 1px solid #333;
+                }
+                .detail-label {
+                    color: #999;
+                    font-size: 14px;
+                }
+                .detail-value {
+                    color: #fff;
+                    font-weight: bold;
+                    margin-top: 4px;
+                }
+                .download-section {
+                    margin: 30px 0;
+                }
+                .download-button {
+                    display: inline-block;
+                    background: linear-gradient(135deg, #ff003c 0%, #cc0030 100%);
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    margin: 8px 0;
+                    font-weight: bold;
+                }
+                .download-button:hover {
+                    background: linear-gradient(135deg, #cc0030 0%, #ff003c 100%);
+                }
+                .license-terms {
+                    background-color: #0e0e0e;
+                    border-left: 4px solid #ff003c;
+                    padding: 20px;
+                    margin: 20px 0;
+                }
+                .license-terms h3 {
+                    color: #ffffff;
+                    margin-top: 0;
+                }
+                .license-terms ul {
+                    color: #cccccc;
+                    line-height: 1.8;
+                    padding-left: 20px;
+                }
+                .license-terms li {
+                    margin: 8px 0;
+                }
+                .expiry-note {
+                    background-color: #2a1a00;
+                    border: 1px solid #ff8800;
+                    color: #ffcc00;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                    font-size: 14px;
+                }
+                .footer {
+                    text-align: center;
+                    padding: 20px;
+                    background-color: #0e0e0e;
+                    color: #888;
+                    font-size: 12px;
+                }
+                .footer img {
+                    max-width: 150px;
+                    margin-bottom: 10px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>¡Gracias por tu compra!</h1>
+                </div>
+                
+                <div class="content">
+                    <p>Hola <strong>${customerName}</strong>,</p>
+                    
+                    <p>Tu compra se ha completado exitosamente. Aquí están los detalles:</p>
+                    
+                    <div class="beat-details">
+                        <h2>${beatTitle}</h2>
+                        <div class="detail-row">
+                            <div class="detail-label">Licencia adquirida</div>
+                            <div class="detail-value">${licenseName}</div>
+                        </div>
+                        <div class="detail-row" style="border-bottom: none;">
+                            <div class="detail-label">Formatos incluidos</div>
+                            <div class="detail-value">${formats.join(', ')}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="download-section">
+                        <h3 style="color: #ffffff;">Descargar tus archivos:</h3>
+                        <p style="color: #cccccc; font-size: 14px; margin-bottom: 20px;">
+                            Haz clic en los botones de abajo para descargar tu beat en los formatos incluidos en tu licencia.
+                        </p>
+                        ${formats.map(format => {
+                            let url = '';
+                            if (format === 'MP3' && files.mp3Url) url = files.mp3Url;
+                            if (format === 'WAV' && files.wavUrl) url = files.wavUrl;
+                            if (format === 'STEMS' && files.stemsUrl) url = files.stemsUrl;
+                            
+                            return url ? `
+                                <a href="${url}" class="download-button" style="display: block; margin: 10px 0;">
+                                    📥 Descargar ${format}
+                                </a>
+                            ` : '';
+                        }).join('')}
+                    </div>
+                    
+                    <div class="expiry-note">
+                        ⏰ <strong>Importante:</strong> Descarga tus archivos pronto. Si tienes problemas con la descarga, 
+                        contáctanos dentro de las próximas 48 horas.
+                    </div>
+                    
+                    ${licenseTerms ? `
+                    <div class="license-terms">
+                        <h3>Términos de Uso de tu Licencia:</h3>
+                        <ul>
+                            ${licenseTerms.usedForRecording ? '<li>✅ Permitido para grabación musical</li>' : ''}
+                            <li>📀 Distribuir hasta <strong>${formatTerm(licenseTerms.distributionLimit)}</strong> copias</li>
+                            <li>🎧 <strong>${formatTerm(licenseTerms.audioStreams)}</strong> reproducciones online</li>
+                            <li>🎬 <strong>${formatTerm(licenseTerms.musicVideos)}</strong> vídeos musicales</li>
+                            ${licenseTerms.forProfitPerformances ? '<li>✅ Actuaciones con ánimo de lucro permitidas</li>' : '<li>❌ Actuaciones con ánimo de lucro no permitidas</li>'}
+                            <li>📻 Emisión en <strong>${formatTerm(licenseTerms.radioBroadcasting)}</strong> emisoras de radio</li>
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
+                    <p style="color: #cccccc; margin-top: 30px;">
+                        Si tienes alguna pregunta o necesitas reenvío de los archivos, contáctanos en 
+                        <strong>support@otp-records.com</strong>
+                    </p>
+                    
+                    <p style="color: #cccccc;">
+                        <strong>¡Disfruta creando música increíble!</strong>
+                    </p>
+                </div>
+                
+                <div class="footer">
+                    <p><strong>OTP Records</strong></p>
+                    <p>© ${new Date().getFullYear()} OTP Records. Todos los derechos reservados.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+    }
+
+    generateBeatDeliveryText(customerName, beatTitle, licenseName, formats, files, licenseTerms) {
+        const formatTerm = (value) => {
+            if (value === 'unlimited' || value === 0 || value === '0') {
+                return 'Ilimitado';
+            }
+            return value;
+        };
+
+        // Generate download links text
+        let downloadLinks = '';
+        formats.forEach(format => {
+            let url = '';
+            if (format === 'MP3' && files.mp3Url) url = files.mp3Url;
+            if (format === 'WAV' && files.wavUrl) url = files.wavUrl;
+            if (format === 'STEMS' && files.stemsUrl) url = files.stemsUrl;
+            
+            if (url) {
+                downloadLinks += `\n📥 Descargar ${format}: ${url}`;
+            }
+        });
+
+        let termsText = '';
+        if (licenseTerms) {
+            termsText = `
+TÉRMINOS DE USO DE TU LICENCIA:
+${licenseTerms.usedForRecording ? '✅ Permitido para grabación musical' : ''}
+📀 Distribuir hasta ${formatTerm(licenseTerms.distributionLimit)} copias
+🎧 ${formatTerm(licenseTerms.audioStreams)} reproducciones online
+🎬 ${formatTerm(licenseTerms.musicVideos)} vídeos musicales
+${licenseTerms.forProfitPerformances ? '✅ Actuaciones con ánimo de lucro permitidas' : '❌ Actuaciones con ánimo de lucro no permitidas'}
+📻 Emisión en ${formatTerm(licenseTerms.radioBroadcasting)} emisoras de radio
+`;
+        }
+
+        return `
+¡GRACIAS POR TU COMPRA!
+========================
+
+Hola ${customerName},
+
+Tu compra se ha completado exitosamente. Aquí están los detalles:
+
+BEAT: ${beatTitle}
+LICENCIA: ${licenseName}
+FORMATOS: ${formats.join(', ')}
+
+DESCARGAR TUS ARCHIVOS:${downloadLinks}
+
+⏰ IMPORTANTE: Descarga tus archivos pronto. Si tienes problemas, contáctanos dentro de las próximas 48 horas.
+
+${termsText}
+
+Si tienes alguna pregunta, contáctanos en support@otp-records.com
+
+¡Disfruta creando música increíble!
+
+---
+OTP Records
+© ${new Date().getFullYear()} OTP Records. Todos los derechos reservados.
         `.trim();
     }
 }

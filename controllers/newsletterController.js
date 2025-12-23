@@ -74,10 +74,14 @@ const subscribeToNewsletter = async (req, res) => {
                     subscribedAt: existingSubscription.subscribedAt
                 });
             } else if (existingSubscription.status === 'unsubscribed') {
-                // Reactivar suscripción
+                // Reactivar suscripción con nuevo token
+                const crypto = require('crypto');
+                const newToken = crypto.randomBytes(32).toString('hex');
+                
                 existingSubscription.status = 'active';
                 existingSubscription.subscribedAt = new Date();
                 existingSubscription.unsubscribedAt = undefined;
+                existingSubscription.confirmationToken = newToken;
                 await existingSubscription.save();
                 
                 console.log('📬 Newsletter subscription reactivated:', sanitizedEmail);
@@ -92,6 +96,10 @@ const subscribeToNewsletter = async (req, res) => {
             }
         }
         
+        // Generar token único para desuscripción
+        const crypto = require('crypto');
+        const unsubscribeToken = crypto.randomBytes(32).toString('hex');
+        
         // Crear nueva suscripción
         const subscriptionData = {
             email: sanitizedEmail,
@@ -99,7 +107,8 @@ const subscribeToNewsletter = async (req, res) => {
             ipAddress: req.ip || req.connection.remoteAddress,
             userAgent: req.get('User-Agent') || 'Unknown',
             subscribedAt: new Date(),
-            isConfirmed: true
+            isConfirmed: true,
+            confirmationToken: unsubscribeToken
         };
         
         const subscription = await NewsletterSubscription.create(subscriptionData);
@@ -144,11 +153,12 @@ const subscribeToNewsletter = async (req, res) => {
     }
 };
 
-// DELETE - Desuscribirse de la newsletter
+// POST - Desuscribirse de la newsletter
 const unsubscribeFromNewsletter = async (req, res) => {
     try {
-        const { email } = req.body;
+        const { email, token } = req.body;
         
+        // Validación de datos
         if (!email) {
             return res.status(400).json({
                 error: 'EMAIL_REQUIRED',
@@ -158,18 +168,49 @@ const unsubscribeFromNewsletter = async (req, res) => {
         
         const sanitizedEmail = email.trim().toLowerCase();
         
+        // Validar formato de email
+        const emailRegex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+        if (!emailRegex.test(sanitizedEmail)) {
+            return res.status(400).json({
+                error: 'INVALID_EMAIL',
+                message: 'Please provide a valid email address'
+            });
+        }
+        
+        // Buscar la suscripción (sin filtrar por estado)
         const subscription = await NewsletterSubscription.findOne({ 
-            email: sanitizedEmail,
-            status: 'active'
+            email: sanitizedEmail
         });
         
+        // Email no encontrado en la base de datos
         if (!subscription) {
             return res.status(404).json({
-                error: 'NOT_SUBSCRIBED',
+                error: 'EMAIL_NOT_FOUND',
                 message: 'Email not found in our newsletter subscribers'
             });
         }
         
+        // Ya estaba desuscrito - tratado como éxito (410 Gone)
+        if (subscription.status === 'unsubscribed') {
+            console.log('📭 Already unsubscribed:', sanitizedEmail);
+            return res.status(410).json({
+                success: true,
+                message: 'This email was already unsubscribed from newsletter',
+                email: sanitizedEmail,
+                unsubscribedAt: subscription.unsubscribedAt,
+                status: 'already_unsubscribed'
+            });
+        }
+        
+        // Validar token si se proporciona (para desuscripción desde email)
+        if (token && subscription.confirmationToken && subscription.confirmationToken !== token) {
+            return res.status(400).json({
+                error: 'INVALID_TOKEN',
+                message: 'Invalid unsubscription token'
+            });
+        }
+        
+        // Desuscribir
         await subscription.unsubscribe();
         
         console.log('📭 Newsletter unsubscription:', sanitizedEmail);

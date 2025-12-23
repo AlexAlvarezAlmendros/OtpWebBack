@@ -5,8 +5,8 @@ const Schema = mongoose.Schema;
 const eventSchema = new Schema({
 	// Usaremos el _id de MongoDB en lugar de un id UUID por simplicidad MERN.
 	// Si necesitas el UUID, podemos usar una librería como 'uuid'.
-	name: { type: String, required: true },
-	location: { type: String, required: true },
+	name: { type: String, required: true }, //Titulo
+	location: { type: String, required: true }, //Ubicacion
 	description: { type: String, required: false, default: '' },
 	colaborators: { type: String, required: false },
 	youtubeLink: { type: String, required: false },

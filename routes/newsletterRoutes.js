@@ -18,8 +18,9 @@ router.post('/subscribe',
     subscribeToNewsletter
 );
 
-// POST - Desuscribirse de la newsletter (público)
+// POST - Desuscribirse de la newsletter (público con rate limiting)
 router.post('/unsubscribe', 
+    checkSubscriptionRateLimit,
     unsubscribeFromNewsletter
 );
 

@@ -3,12 +3,14 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const releaseRoutes = require('./routes/releaseRoutes');
+const beatRoutes = require('./routes/beatRoutes');
 const artistRoutes = require('./routes/artistRoutes');
 const studioRoutes = require('./routes/studioRoutes');
 const eventRoutes = require('./routes/eventRoutes');
 const spotifyRoutes = require('./routes/spotifyRoutes');
 const contactRoutes = require('./routes/contactRoutes');
 const newsletterRoutes = require('./routes/newsletterRoutes');
+const newsletterContentRoutes = require('./routes/newsletterContentRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const userRoutes = require('./routes/userRoutes');
 
@@ -21,6 +23,12 @@ app.post('/api/tickets/webhook',
   require('./controllers/ticketController').handleWebhook
 );
 
+// Webhook de Stripe para compra de beats
+app.post('/api/beats/webhook',
+  express.raw({ type: 'application/json' }),
+  require('./controllers/beatController').handleBeatWebhook
+);
+
 // Middlewares
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL del frontend
@@ -29,8 +37,15 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
-// Logging de todas las requests (después del webhook)
+app.use(express.json()); // Para parsear el body de las peticiones a JSON
+
+// Logging de todas las requests (después de express.json para que no interfiera con webhooks)
 app.use((req, res, next) => {
+  // No loguear webhooks de Stripe (ya tienen sus propios logs)
+  if (req.path.includes('/webhook')) {
+    return next();
+  }
+  
   console.log(`🌐 ${new Date().toISOString()} - ${req.method} ${req.path}`);
   console.log('📋 Headers:', JSON.stringify(req.headers, null, 2));
   if (req.body && Object.keys(req.body).length > 0) {
@@ -38,8 +53,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
 // Conexión a la base de datos
 const MONGO_URI = process.env.MONGO_URI;
@@ -56,12 +69,14 @@ mongoose.connect(MONGO_URI)
 
 // Ruta de la api
 app.use('/api/releases', releaseRoutes);
+app.use('/api/beats', beatRoutes);
 app.use('/api/artists', artistRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/studios', studioRoutes);
 app.use('/api/spotify', spotifyRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/newsletter', newsletterRoutes);
+app.use('/api/newsletters', newsletterContentRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);
 
@@ -99,6 +114,10 @@ if (require.main === module) {
     console.log(`Servidor corriendo en el puerto: ${PORT}`);
   });
 }
+
+// Inicializar cron jobs
+const { initCronJobs } = require('./services/cronService');
+initCronJobs();
 
 // Exportar para Vercel
 module.exports = app;
