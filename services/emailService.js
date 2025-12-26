@@ -1,13 +1,24 @@
 const nodemailer = require('nodemailer');
-// Configurar Babel para soportar JSX en tiempo de ejecución
-require('@babel/register')({
-  presets: ['@babel/preset-env', '@babel/preset-react'],
-  extensions: ['.js', '.jsx']
-});
 const React = require('react');
 const { render } = require('@react-email/render');
-const NewsletterEmail = require('../emails/NewsletterEmail').default;
-const BeatPurchaseEmail = require('../emails/BeatPurchaseEmail').default;
+
+// Lazy load email templates to avoid Babel issues
+let NewsletterEmail, BeatPurchaseEmail;
+try {
+  // Try to require with Babel if available (development)
+  require('@babel/register')({
+    presets: ['@babel/preset-env', '@babel/preset-react'],
+    extensions: ['.js', '.jsx'],
+    only: [/emails/],
+    cache: false
+  });
+  NewsletterEmail = require('../emails/NewsletterEmail').default;
+  BeatPurchaseEmail = require('../emails/BeatPurchaseEmail').default;
+} catch (error) {
+  console.log('⚠️  React email templates not available, using fallback HTML templates');
+  NewsletterEmail = null;
+  BeatPurchaseEmail = null;
+}
 
 
 class EmailService {
@@ -595,13 +606,18 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
             for (const sub of subscribers) {
                  try {
                      // Generate personalized HTML for each subscriber with their unsubscribe token
-                     const emailHtml = await render(
-                         React.createElement(NewsletterEmail, { 
-                             newsletter,
-                             subscriberEmail: sub.email,
-                             unsubscribeToken: sub.confirmationToken || sub._id.toString()
-                         })
-                     );
+                     let emailHtml;
+                     if (NewsletterEmail) {
+                         emailHtml = await render(
+                             React.createElement(NewsletterEmail, { 
+                                 newsletter,
+                                 subscriberEmail: sub.email,
+                                 unsubscribeToken: sub.confirmationToken || sub._id.toString()
+                             })
+                         );
+                     } else {
+                         emailHtml = this.generateNewsletterFallbackTemplate(newsletter, sub.email, sub.confirmationToken || sub._id.toString());
+                     }
                      
                      await this.transporter.sendMail({
                          from: {
@@ -643,16 +659,21 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
             console.log('   Formats:', formats.join(', '));
 
             // Generate HTML using React Email template
-            const emailHtml = await render(
-                React.createElement(BeatPurchaseEmail, {
-                    customerName,
-                    beatTitle,
-                    licenseName,
-                    formats,
-                    files,
-                    licenseTerms
-                })
-            );
+            let emailHtml;
+            if (BeatPurchaseEmail) {
+                emailHtml = await render(
+                    React.createElement(BeatPurchaseEmail, {
+                        customerName,
+                        beatTitle,
+                        licenseName,
+                        formats,
+                        files,
+                        licenseTerms
+                    })
+                );
+            } else {
+                emailHtml = this.generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms);
+            }
 
             const emailOptions = {
                 from: {
@@ -947,6 +968,105 @@ Si tienes alguna pregunta, contáctanos en support@otp-records.com
 OTP Records
 © ${new Date().getFullYear()} OTP Records. Todos los derechos reservados.
         `.trim();
+    }
+
+    generateNewsletterFallbackTemplate(newsletter, subscriberEmail, unsubscribeToken) {
+        const { title, content } = newsletter;
+        const { uniqueBeats = [], upcomingReleases = [], events = [], discounts = [] } = content || {};
+        const unsubscribeUrl = `https://www.otherpeople.es/unsubscribe?email=${encodeURIComponent(subscriberEmail)}&token=${unsubscribeToken}`;
+
+        let releasesHtml = '';
+        if (upcomingReleases.length > 0) {
+            releasesHtml = '<h2 style="color: #ff003c; border-bottom: 1px solid #333; padding-bottom: 8px;">Últimos lanzamientos</h2>';
+            upcomingReleases.forEach(song => {
+                releasesHtml += `
+                <div style="background-color: #1a1a1a; border-radius: 8px; margin-bottom: 16px; padding: 12px; border: 1px solid #333; display: flex; gap: 12px;">
+                    <img src="${song.img || 'https://via.placeholder.com/100'}" width="100" height="100" style="border-radius: 4px; object-fit: cover;" />
+                    <div>
+                        <h3 style="margin: 0; font-size: 18px;">${song.title}</h3>
+                        <p style="color: #ccc; margin: 4px 0;">${song.subtitle || 'New Single'}</p>
+                        <a href="${song.spotifyLink || '#'}" style="background-color: #1DB954; color: white; padding: 10px 12px; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 8px;">Listen on Spotify</a>
+                    </div>
+                </div>`;
+            });
+        }
+
+        let eventsHtml = '';
+        if (events.length > 0) {
+            eventsHtml = '<h2 style="color: #ff003c; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 24px;">Próximos eventos</h2>';
+            events.forEach(event => {
+                eventsHtml += `
+                <div style="background-color: #1a1a1a; border-radius: 8px; margin-bottom: 16px; padding: 12px; border: 1px solid #333; display: flex; gap: 12px;">
+                    <img src="${event.img || 'https://via.placeholder.com/100'}" width="100" height="100" style="border-radius: 4px; object-fit: cover;" />
+                    <div>
+                        <h3 style="margin: 0; font-size: 20px;">${event.name}</h3>
+                        <p style="color: #ddd; margin: 8px 0;">📍 ${event.location} | 🕒 ${new Date(event.date).toLocaleDateString()}</p>
+                        <a href="https://www.otherpeople.es/eventos/${event._id}" style="background-color: #ff003c; color: white; padding: 10px 12px; border-radius: 4px; text-decoration: none; display: inline-block;">Comprar Entradas</a>
+                    </div>
+                </div>`;
+            });
+        }
+
+        let beatsHtml = '';
+        if (uniqueBeats.length > 0) {
+            beatsHtml = '<h2 style="color: #ff003c; border-bottom: 1px solid #333; padding-bottom: 8px; margin-top: 24px;">Beats Exclusivos</h2>';
+            uniqueBeats.forEach(beat => {
+                beatsHtml += `
+                <div style="background-color: #1a1a1a; border-radius: 8px; margin-bottom: 16px; padding: 12px; border: 1px solid #333; display: flex; gap: 12px;">
+                    <img src="${beat.coverUrl || 'https://via.placeholder.com/100'}" width="100" height="100" style="border-radius: 4px; object-fit: cover;" />
+                    <div>
+                        <h3 style="margin: 0; font-size: 18px;">${beat.title}</h3>
+                        <p style="color: #ccc; margin: 4px 0;">${beat.key} • ${beat.bpm} BPM</p>
+                        <a href="https://www.otherpeople.es/beats/${beat._id}" style="background-color: #ff003c; color: white; padding: 10px 12px; border-radius: 4px; text-decoration: none; display: inline-block; margin-top: 8px;">${beat.price === 0 ? 'Descargar' : `${beat.price}€`}</a>
+                    </div>
+                </div>`;
+            });
+        }
+
+        let discountsHtml = '';
+        if (discounts.length > 0) {
+            discounts.forEach(discount => {
+                discountsHtml += `
+                <div style="text-align: center; margin: 32px 0; border: 1px dashed #ff003c; padding: 20px; border-radius: 8px;">
+                    <h3 style="font-size: 24px; color: #fff;">🎁 Descuento exclusivo</h3>
+                    <p style="color: #ccc;">Usa el código abajo al pagar:</p>
+                    <p style="font-size: 32px; font-weight: bold; color: #ff003c; margin: 16px 0;">${discount.code}</p>
+                    <p style="color: #888;">${discount.description}</p>
+                </div>`;
+            });
+        }
+
+        return `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>${title}</title>
+        </head>
+        <body style="background-color: #000000; font-family: Arial, sans-serif; color: #ffffff; margin: 0; padding: 0;">
+            <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+                <div style="text-align: center; background-color: #111; padding: 24px;">
+                    <img src="https://www.otherpeople.es/img/OTPNewsletter.png" width="200" alt="Other People Records" style="max-width: 50%; height: auto;" />
+                    <h1 style="font-size: 28px; margin: 16px 0 0;">${title}</h1>
+                </div>
+                
+                <div style="padding: 20px 0;">
+                    ${releasesHtml}
+                    ${eventsHtml}
+                    ${beatsHtml}
+                    ${discountsHtml}
+                </div>
+                
+                <hr style="border-color: #333; margin: 32px 0;" />
+                
+                <div style="text-align: center;">
+                    <p style="font-size: 14px; color: #666;">© ${new Date().getFullYear()} Other People Records. All rights reserved.</p>
+                    <a href="${unsubscribeUrl}" style="color: #666; text-decoration: underline;">Unsubscribe</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
     }
 }
 
