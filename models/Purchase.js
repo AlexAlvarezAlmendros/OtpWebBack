@@ -21,7 +21,7 @@ const purchaseSchema = new Schema({
 // Índices para consultas rápidas
 purchaseSchema.index({ beatId: 1, purchasedAt: -1 });
 purchaseSchema.index({ customerEmail: 1 });
-purchaseSchema.index({ stripeSessionId: 1 });
+// stripeSessionId index removed - already defined as unique in schema
 
 const Purchase = mongoose.model('Purchase', purchaseSchema);
 
