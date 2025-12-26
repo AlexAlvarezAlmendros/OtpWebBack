@@ -296,7 +296,7 @@ export const BeatPurchaseEmail = ({
               OTHER PEOPLE RECORDS
             </Text>
             <Text style={{ margin: '0', fontSize: '12px', color: '#666' }}>
-              © {new Date().getFullYear()} OTP Records. Todos los derechos reservados.
+              © {new Date().getFullYear()} Other People Records. Todos los derechos reservados.
             </Text>
           </Section>
         </Container>

@@ -198,7 +198,7 @@ export const NewsletterEmail = ({
           {/* Footer */}
           <Section style={{ textAlign: 'center' }}>
             <Text style={{ fontSize: '14px', color: '#666' }}>
-              © {new Date().getFullYear()} Other People Records. All rights reserved.
+              © {new Date().getFullYear()} Other People Records. Todos los derechos reservados.
             </Text>
             <Link href={unsubscribeUrl} style={{ color: '#666', textDecoration: 'underline' }}>
               Unsubscribe
