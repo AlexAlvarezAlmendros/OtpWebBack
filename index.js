@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const connectDB = require('./utils/dbConnection');
 const releaseRoutes = require('./routes/releaseRoutes');
 const beatRoutes = require('./routes/beatRoutes');
 const artistRoutes = require('./routes/artistRoutes');
@@ -58,14 +59,11 @@ app.use((req, res, next) => {
 const MONGO_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 5001;
 
-// Conectar a MongoDB
-mongoose.connect(MONGO_URI)
-    .then(() => {
-        console.log('Conectado a MongoDB Atlas');
-    })
-    .catch((error) => {
-        console.error('Error de conexión a la base de datos:', error);
-    });
+// Conectar a MongoDB (para desarrollo local)
+// En Vercel, la conexión se maneja por request en los webhooks y otras rutas
+connectDB().catch(err => {
+    console.error('❌ Initial MongoDB connection failed:', err.message);
+});
 
 // Ruta de la api
 app.use('/api/releases', releaseRoutes);

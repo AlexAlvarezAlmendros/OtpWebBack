@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const connectDB = require('../utils/dbConnection');
 
 // Helper function to validate licenses
 const validateLicenses = (licenses) => {
@@ -364,6 +365,15 @@ const createCheckoutSession = async (req, res) => {
 // Handle Stripe Webhook for Beat Purchases
 const handleBeatWebhook = async (req, res) => {
     console.log('🔔 Webhook received at /api/beats/webhook');
+    
+    // Ensure MongoDB connection before processing
+    try {
+        await connectDB();
+    } catch (dbError) {
+        console.error('❌ Database connection failed:', dbError.message);
+        return res.status(503).send('Database connection error');
+    }
+    
     console.log('📝 Body type:', typeof req.body);
     console.log('📝 Body is Buffer:', Buffer.isBuffer(req.body));
     console.log('📝 Headers:', req.headers);

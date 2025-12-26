@@ -3,6 +3,7 @@ const QRCode = require('qrcode');
 const Event = require('../models/Event');
 const Ticket = require('../models/Ticket');
 const EmailService = require('../services/emailService');
+const connectDB = require('../utils/dbConnection');
 const { 
 	generateTicketData, 
 	generateTicketPDF,
@@ -154,6 +155,14 @@ const createCheckoutSession = async (req, res) => {
  */
 const handleWebhook = async (req, res) => {
 	console.log('🔔 Webhook received from Stripe');
+	
+	// Ensure MongoDB connection before processing
+	try {
+		await connectDB();
+	} catch (dbError) {
+		console.error('❌ Database connection failed:', dbError.message);
+		return res.status(503).send('Database connection error');
+	}
 	
 	const sig = req.headers['stripe-signature'];
 	let event;
