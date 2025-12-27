@@ -17,7 +17,7 @@
   },
   "crons": [
     {
-      "path": "/api/newsletter/send-scheduled?secret=2f41967457e597603e754832faacfa67aeb1692191b1d1eee153a325a0240519",
+      "path": "/api/newsletter/send-scheduled",
       "schedule": "0 10 * * *"
     }
   ]

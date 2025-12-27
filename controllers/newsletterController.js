@@ -385,9 +385,15 @@ const sendScheduledNewsletters = async (req, res) => {
         // Validar token de seguridad si existe en variables de entorno
         const cronSecret = process.env.CRON_SECRET;
         if (cronSecret) {
-            const providedSecret = req.headers['x-cron-secret'] || req.query.secret;
+            // Vercel Cron envía el secret como Authorization Bearer header
+            const authHeader = req.headers['authorization'];
+            const bearerToken = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : null;
+            const providedSecret = bearerToken || req.headers['x-cron-secret'] || req.query.secret;
+            
             if (providedSecret !== cronSecret) {
                 console.warn('⚠️ Unauthorized cron job attempt');
+                console.warn('   Expected:', cronSecret);
+                console.warn('   Received:', providedSecret);
                 return res.status(401).json({
                     error: 'UNAUTHORIZED',
                     message: 'Invalid or missing cron secret'

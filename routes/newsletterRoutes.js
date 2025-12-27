@@ -44,8 +44,12 @@ router.delete('/subscriptions/:id',
     deleteSubscription
 );
 
-// POST - Enviar newsletters programadas (se puede usar con Vercel Cron o manualmente)
+// POST/GET - Enviar newsletters programadas (se puede usar con Vercel Cron o manualmente)
 // Protegido con token en header para seguridad
+// Vercel Cron usa GET con Authorization Bearer header
+router.get('/send-scheduled', 
+    sendScheduledNewsletters
+);
 router.post('/send-scheduled', 
     sendScheduledNewsletters
 );
