@@ -578,22 +578,27 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
      */
     async sendNewsletter(newsletter) {
         try {
+            console.log('📧 [sendNewsletter] Starting newsletter send process...');
+            console.log('📧 [sendNewsletter] Newsletter:', newsletter?.title, 'ID:', newsletter?._id);
+            
             if (!this.transporter) {
-                console.warn('⚠️ Email service not initialized. Skipping newsletter send.');
+                console.warn('⚠️ [sendNewsletter] Email service not initialized. Skipping newsletter send.');
                 return; 
             }
 
             // In a real scenario, you'd fetch all subscribers here.
             // For now, we mock valid subscribers or send to a test list/admin.
+            console.log('📧 [sendNewsletter] Fetching active subscribers...');
             const NewsletterSubscription = require('../models/NewsletterSubscription');
             const subscribers = await NewsletterSubscription.find({ status: 'active' });
+            console.log(`📧 [sendNewsletter] Found ${subscribers.length} active subscribers`);
             
             if (subscribers.length === 0) {
-                console.log('0️⃣ No active subscribers found.');
+                console.log('0️⃣ [sendNewsletter] No active subscribers found.');
                 return;
             }
             
-            console.log(`📨 Preparing to send newsletter "${newsletter.title}" to ${subscribers.length} subscribers...`);
+            console.log(`📨 [sendNewsletter] Preparing to send newsletter "${newsletter.title}" to ${subscribers.length} subscribers...`);
 
             // Send in batches or loop (Nodemailer is not a bulk sender service, be careful with limits)
             // For MVP/Demo: loop
@@ -605,9 +610,11 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
             // Assuming small list for now.
             for (const sub of subscribers) {
                  try {
+                     console.log(`📧 [sendNewsletter] Generating email for: ${sub.email}`);
                      // Generate personalized HTML for each subscriber with their unsubscribe token
                      let emailHtml;
                      if (NewsletterEmail) {
+                         console.log(`📧 [sendNewsletter] Using React template for: ${sub.email}`);
                          emailHtml = await render(
                              React.createElement(NewsletterEmail, { 
                                  newsletter,
@@ -616,9 +623,11 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
                              })
                          );
                      } else {
+                         console.log(`📧 [sendNewsletter] Using fallback template for: ${sub.email}`);
                          emailHtml = this.generateNewsletterFallbackTemplate(newsletter, sub.email, sub.confirmationToken || sub._id.toString());
                      }
                      
+                     console.log(`📧 [sendNewsletter] Sending email to: ${sub.email}`);
                      await this.transporter.sendMail({
                          from: {
                              name: process.env.EMAIL_FROM_NAME || 'Other People Records',
@@ -628,18 +637,22 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
                          subject: newsletter.title,
                          html: emailHtml,
                      });
+                     console.log(`✅ [sendNewsletter] Email sent successfully to: ${sub.email}`);
                      results.success++;
                  } catch (err) {
-                     console.error(`❌ Failed to send to ${sub.email}:`, err.message);
+                     console.error(`❌ [sendNewsletter] Failed to send to ${sub.email}:`, err.message);
+                     console.error(`❌ [sendNewsletter] Error stack:`, err.stack);
                      results.failed++;
                  }
             }
             
-            console.log(`✅ Newsletter sent. Success: ${results.success}, Failed: ${results.failed}`);
+            console.log(`✅ [sendNewsletter] Newsletter sent. Success: ${results.success}, Failed: ${results.failed}`);
             return results;
 
         } catch (error) {
-             console.error('❌ Error sending newsletter batch:', error);
+             console.error('❌ [sendNewsletter] Error sending newsletter batch:', error);
+             console.error('❌ [sendNewsletter] Error message:', error.message);
+             console.error('❌ [sendNewsletter] Error stack:', error.stack);
              throw error;
         }
     }

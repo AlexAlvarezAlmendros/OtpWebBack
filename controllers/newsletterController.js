@@ -377,11 +377,93 @@ const deleteSubscription = async (req, res) => {
     }
 };
 
+// POST - Enviar newsletters programadas (endpoint para cron)
+const sendScheduledNewsletters = async (req, res) => {
+    try {
+        console.log('🔔 Manual newsletter send triggered');
+        
+        // Validar token de seguridad si existe en variables de entorno
+        const cronSecret = process.env.CRON_SECRET;
+        if (cronSecret) {
+            const providedSecret = req.headers['x-cron-secret'] || req.query.secret;
+            if (providedSecret !== cronSecret) {
+                console.warn('⚠️ Unauthorized cron job attempt');
+                return res.status(401).json({
+                    error: 'UNAUTHORIZED',
+                    message: 'Invalid or missing cron secret'
+                });
+            }
+        }
+        
+        const Newsletter = require('../models/Newsletter');
+        const EmailService = require('../services/emailService');
+        const emailService = new EmailService();
+        
+        const now = new Date();
+        console.log('⏰ Checking for scheduled newsletters at:', now.toISOString());
+        
+        const newslettersToSend = await Newsletter.find({
+            status: 'scheduled',
+            scheduledAt: { $lte: now }
+        }).populate('content.uniqueBeats content.upcomingReleases content.events');
+        
+        console.log(`📊 Found ${newslettersToSend.length} scheduled newsletter(s) to send.`);
+        
+        const results = [];
+        
+        for (const news of newslettersToSend) {
+            try {
+                console.log(`📤 Processing newsletter: ${news.title} (${news._id})`);
+                
+                // Send email
+                const sendResult = await emailService.sendNewsletter(news);
+                
+                // Update status
+                news.status = 'sent';
+                news.sentAt = new Date();
+                await news.save();
+                
+                console.log(`✅ Newsletter sent and updated: ${news.title}`);
+                
+                results.push({
+                    id: news._id,
+                    title: news.title,
+                    status: 'success',
+                    sendResult
+                });
+            } catch (newsletterError) {
+                console.error(`❌ Error processing newsletter ${news.title}:`, newsletterError);
+                results.push({
+                    id: news._id,
+                    title: news.title,
+                    status: 'error',
+                    error: newsletterError.message
+                });
+            }
+        }
+        
+        res.status(200).json({
+            success: true,
+            message: `Processed ${newslettersToSend.length} newsletter(s)`,
+            results
+        });
+        
+    } catch (error) {
+        console.error('❌ Error in manual newsletter send:', error);
+        res.status(500).json({
+            error: 'INTERNAL_SERVER_ERROR',
+            message: 'Error sending scheduled newsletters',
+            details: error.message
+        });
+    }
+};
+
 module.exports = {
     subscribeToNewsletter,
     unsubscribeFromNewsletter,
     getNewsletterSubscriptions,
     checkSubscriptionStatus,
     deleteSubscription,
-    checkSubscriptionRateLimit
+    checkSubscriptionRateLimit,
+    sendScheduledNewsletters
 };

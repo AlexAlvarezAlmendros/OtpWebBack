@@ -5,7 +5,8 @@ const {
     getNewsletterSubscriptions,
     checkSubscriptionStatus,
     deleteSubscription,
-    checkSubscriptionRateLimit
+    checkSubscriptionRateLimit,
+    sendScheduledNewsletters
 } = require('../controllers/newsletterController');
 const { checkJwt } = require('../middleware/auth');
 const { checkPermissions } = require('../middleware/permissions');
@@ -41,6 +42,12 @@ router.delete('/subscriptions/:id',
     checkJwt,
     checkPermissions(['admin:all']),
     deleteSubscription
+);
+
+// POST - Enviar newsletters programadas (se puede usar con Vercel Cron o manualmente)
+// Protegido con token en header para seguridad
+router.post('/send-scheduled', 
+    sendScheduledNewsletters
 );
 
 module.exports = router;
