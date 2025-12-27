@@ -132,3 +132,4 @@ test-complete-release.js
 SPOTIFY_INTEGRATION_BACKEND.md
 NEWSLETTER_API.md
 stripe.exe
+.vercel
