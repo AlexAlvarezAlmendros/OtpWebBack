@@ -1,11 +1,15 @@
 const Artist = require('../models/Artist');
 const mongoose = require('mongoose');
+const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
 // GET all artists with filtering
 const getArtists = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         // Validate filter parameters
         const validation = validateFilters(req.query);
         if (!validation.isValid) {

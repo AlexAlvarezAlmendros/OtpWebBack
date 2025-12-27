@@ -1,6 +1,7 @@
 const Contact = require('../models/Contact');
 const EmailService = require('../services/emailService');
 const mongoose = require('mongoose');
+const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 
 // Instanciar el servicio de email
@@ -43,6 +44,9 @@ const checkContactRateLimit = (req, res, next) => {
 // POST - Enviar mensaje de contacto
 const sendContactMessage = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         const { name, email, subject, message } = req.body;
         
         // Validación básica

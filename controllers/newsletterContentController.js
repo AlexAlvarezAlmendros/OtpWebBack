@@ -1,9 +1,13 @@
 const Newsletter = require('../models/Newsletter');
+const connectDB = require('../utils/dbConnection');
 const emailService = require('../services/emailService');
 
 // Create a draft newsletter
 exports.createNewsletter = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         console.log('📝 Creating newsletter - Request body:', JSON.stringify(req.body, null, 2));
         const { title, slug, scheduledAt, content, status } = req.body;
         

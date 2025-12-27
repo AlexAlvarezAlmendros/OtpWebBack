@@ -1,5 +1,6 @@
 const NewsletterSubscription = require('../models/NewsletterSubscription');
 const mongoose = require('mongoose');
+const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 
 // Rate limiting para suscripciones (más permisivo que contacto)
@@ -39,6 +40,9 @@ const checkSubscriptionRateLimit = (req, res, next) => {
 // POST - Suscribirse a la newsletter
 const subscribeToNewsletter = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         const { email, source } = req.body;
         
         // Validación básica

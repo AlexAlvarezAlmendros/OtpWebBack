@@ -41,6 +41,9 @@ async function generateQRCode(ticketCode) {
  */
 const createCheckoutSession = async (req, res) => {
 	try {
+		// Ensure database connection
+		await connectDB();
+		
 		const { eventId, quantity, customerEmail, customerName } = req.body;
 
 		// Validar datos de entrada

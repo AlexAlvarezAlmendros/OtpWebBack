@@ -1,11 +1,15 @@
 const Release = require('../models/Release');
 const mongoose = require('mongoose');
+const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
 // GET all releases with filtering
 const getReleases = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         // Validate filter parameters
         const validation = validateFilters(req.query);
         if (!validation.isValid) {

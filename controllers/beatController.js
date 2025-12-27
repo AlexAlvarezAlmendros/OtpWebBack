@@ -57,6 +57,9 @@ const validateLicenses = (licenses) => {
 // GET all beats with filtering
 const getBeats = async (req, res) => {
     try {
+        // Ensure database connection
+        await connectDB();
+        
         // Validate filter parameters
         const validation = validateFilters(req.query);
         if (!validation.isValid) {

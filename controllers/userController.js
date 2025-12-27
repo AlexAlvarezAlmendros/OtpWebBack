@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const connectDB = require('../utils/dbConnection');
 
 /**
  * GET /api/users/me
@@ -6,6 +7,9 @@ const User = require('../models/User');
  */
 const getCurrentUser = async (req, res) => {
   try {
+    // Ensure database connection
+    await connectDB();
+    
     const authData = req.auth || req.user;
     
     console.log('🔍 getCurrentUser - Auth data:', JSON.stringify(authData, null, 2));

@@ -1,11 +1,15 @@
 const Studio = require('../models/Studio');
 const mongoose = require('mongoose');
+const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 
 // GET all studios with filtering
 const getStudios = async (req, res) => {
 	try {
+		// Ensure database connection
+		await connectDB();
+		
 		// Validate filter parameters
 		const validation = validateFilters(req.query);
 		if (!validation.isValid) {
