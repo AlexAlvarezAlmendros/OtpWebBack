@@ -14,6 +14,7 @@ const newsletterRoutes = require('./routes/newsletterRoutes');
 const newsletterContentRoutes = require('./routes/newsletterContentRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const userRoutes = require('./routes/userRoutes');
+const cronRoutes = require('./routes/cronRoutes');
 
 const app = express();
 
@@ -77,6 +78,7 @@ app.use('/api/newsletter', newsletterRoutes);
 app.use('/api/newsletters', newsletterContentRoutes);
 app.use('/api/tickets', ticketRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/cron', cronRoutes);
 
 // Middleware de manejo de errores JWT
 app.use((err, req, res, next) => {
@@ -112,10 +114,6 @@ if (require.main === module) {
     console.log(`Servidor corriendo en el puerto: ${PORT}`);
   });
 }
-
-// Inicializar cron jobs
-const { initCronJobs } = require('./services/cronService');
-initCronJobs();
 
 // Exportar para Vercel
 module.exports = app;
