@@ -15,6 +15,7 @@ const newsletterContentRoutes = require('./routes/newsletterContentRoutes');
 const ticketRoutes = require('./routes/ticketRoutes');
 const userRoutes = require('./routes/userRoutes');
 const cronRoutes = require('./routes/cronRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 
 const app = express();
 
@@ -67,6 +68,7 @@ connectDB().catch(err => {
 });
 
 // Ruta de la api
+app.use('/api/health', healthRoutes);
 app.use('/api/releases', releaseRoutes);
 app.use('/api/beats', beatRoutes);
 app.use('/api/artists', artistRoutes);
