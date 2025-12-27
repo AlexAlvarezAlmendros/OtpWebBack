@@ -6,9 +6,13 @@ const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = requ
 
 // GET all artists with filtering
 const getArtists = async (req, res) => {
+    const requestStart = Date.now();
     try {
         // Ensure database connection
+        console.log('🔌 Initiating DB connection for getArtists...');
+        const dbStart = Date.now();
         await connectDB();
+        console.log(`✅ DB connected in ${Date.now() - dbStart}ms`);
         
         // Validate filter parameters
         const validation = validateFilters(req.query);
@@ -29,13 +33,20 @@ const getArtists = async (req, res) => {
         }
 
         // Execute query with filters
+        console.log('🔍 Executing Artist.find query...');
+        const queryStart = Date.now();
         const artists = await Artist.find(filter)
             .sort(options.sort)
             .limit(options.limit)
-            .skip(options.skip);
+            .skip(options.skip)
+            .lean(); // Use lean() for better performance
+        console.log(`✅ Query completed in ${Date.now() - queryStart}ms, found ${artists.length} artists`);
 
         // Get total count for pagination info
         const totalCount = await Artist.countDocuments(filter);
+        
+        const totalTime = Date.now() - requestStart;
+        console.log(`✅ Total request time: ${totalTime}ms`);
 
         // Response with pagination metadata
         res.status(200).json({
@@ -49,6 +60,9 @@ const getArtists = async (req, res) => {
             filters: filter
         });
     } catch (error) {
+        const totalTime = Date.now() - requestStart;
+        console.error(`❌ Error in getArtists after ${totalTime}ms:`, error.message);
+        console.error('Stack:', error.stack);
         res.status(500).json({ error: error.message });
     }
 };

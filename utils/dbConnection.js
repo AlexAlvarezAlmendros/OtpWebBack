@@ -1,20 +1,22 @@
 const mongoose = require('mongoose');
 
+// Cache the connection to reuse across serverless function invocations
+let cachedConnection = null;
+
 const connectDB = async () => {
-    // Check if mongoose already has an active connection
-    if (mongoose.connection.readyState === 1) {
-        console.log('✅ Using existing MongoDB connection');
-        return;
+    // If we have a cached connection and it's connected, reuse it
+    if (cachedConnection && mongoose.connection.readyState === 1) {
+        console.log('✅ Using cached MongoDB connection');
+        return cachedConnection;
     }
 
-    // Check if we're currently connecting
+    // If connection is in progress, wait for it
     if (mongoose.connection.readyState === 2) {
         console.log('⏳ MongoDB connection in progress, waiting...');
-        // Wait for the connection to be established with timeout
         await new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Connection wait timeout'));
-            }, 25000);
+            }, 8000); // 8 seconds max wait
             
             mongoose.connection.once('connected', () => {
                 clearTimeout(timeout);
@@ -26,7 +28,7 @@ const connectDB = async () => {
                 reject(err);
             });
         });
-        return;
+        return mongoose.connection;
     }
 
     try {
@@ -37,36 +39,48 @@ const connectDB = async () => {
         }
 
         console.log('🔄 Connecting to MongoDB...');
+        const startTime = Date.now();
         
+        // Aggressive timeouts for Vercel Hobby plan (10s max execution time)
         const connectionOptions = {
-            serverSelectionTimeoutMS: 25000, // 25 seconds (less than Vercel's 30s timeout)
-            socketTimeoutMS: 45000,
-            connectTimeoutMS: 25000,
-            maxPoolSize: 10,
-            minPoolSize: 2, // Keep minimum connections alive
+            serverSelectionTimeoutMS: 8000, // 8 seconds - must connect fast
+            socketTimeoutMS: 30000,
+            connectTimeoutMS: 8000,
+            maxPoolSize: 5, // Reduced pool size
+            minPoolSize: 1,
             retryWrites: true,
             retryReads: true,
-            heartbeatFrequencyMS: 10000, // Check connection health every 10s
+            heartbeatFrequencyMS: 15000,
         };
 
-        await mongoose.connect(MONGO_URI, connectionOptions);
+        cachedConnection = await mongoose.connect(MONGO_URI, connectionOptions);
 
-        console.log('✅ Connected to MongoDB Atlas');
+        const connectionTime = Date.now() - startTime;
+        console.log(`✅ Connected to MongoDB Atlas in ${connectionTime}ms`);
         
-        // Set up connection event handlers
-        mongoose.connection.on('disconnected', () => {
-            console.log('⚠️ MongoDB disconnected');
-        });
+        // Set up connection event handlers only once
+        if (!mongoose.connection._eventsListenersSet) {
+            mongoose.connection._eventsListenersSet = true;
+            
+            mongoose.connection.on('disconnected', () => {
+                console.log('⚠️ MongoDB disconnected');
+                cachedConnection = null;
+            });
 
-        mongoose.connection.on('error', (err) => {
-            console.error('❌ MongoDB connection error:', err);
-        });
+            mongoose.connection.on('error', (err) => {
+                console.error('❌ MongoDB connection error:', err);
+                cachedConnection = null;
+            });
 
-        mongoose.connection.on('reconnected', () => {
-            console.log('🔄 MongoDB reconnected');
-        });
+            mongoose.connection.on('reconnected', () => {
+                console.log('🔄 MongoDB reconnected');
+            });
+        }
+        
+        return cachedConnection;
 
     } catch (error) {
+        cachedConnection = null;
         console.error('❌ Error connecting to MongoDB:', error.message);
         console.error('❌ Error name:', error.name);
         if (error.code) {
@@ -78,7 +92,7 @@ const connectDB = async () => {
             await mongoose.disconnect().catch(e => console.error('Error disconnecting:', e));
         }
         
-        throw error;
+        throw new Error(`Database connection failed: ${error.message}`);
     }
 };
 
