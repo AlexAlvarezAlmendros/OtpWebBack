@@ -14,8 +14,6 @@ const processScheduledNewsletters = async () => {
     await connectDB();
     console.log('   ✅ Database connected');
     
-    const Newsletter = require('../models/Newsletter');
-    const EmailService = require('./emailService');
     const emailService = new EmailService();
     
     const newslettersToSend = await Newsletter.find({
