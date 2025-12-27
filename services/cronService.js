@@ -1,5 +1,6 @@
 const Newsletter = require('../models/Newsletter');
 const EmailService = require('./emailService');
+const connectDB = require('../utils/dbConnection');
 
 // Función para procesar newsletters programados
 // Llamada por Vercel Cron Jobs vía /api/cron/process-newsletters
@@ -8,11 +9,14 @@ const processScheduledNewsletters = async () => {
   console.log('⏰ Processing scheduled newsletters at:', now.toISOString());
   
   try {
+    // Ensure database connection before querying
+    console.log('   🔍 Ensuring database connection...');
+    await connectDB();
+    console.log('   ✅ Database connected');
+    
     const Newsletter = require('../models/Newsletter');
     const EmailService = require('./emailService');
     const emailService = new EmailService();
-    
-    console.log('   🔍 Connecting to database...');
     
     const newslettersToSend = await Newsletter.find({
       status: 'scheduled',
