@@ -1,4 +1,5 @@
 const express = require('express');
+const imageUpload = require('../middleware/imageUpload');
 const {
     getReleases,
     getRelease,
@@ -24,7 +25,8 @@ router.get('/:id', getRelease);
 // POST (crear) un nuevo release (requiere autenticación y permisos)
 router.post('/', 
   checkJwt, 
-  checkPermissions(['write:releases']), 
+  checkPermissions(['write:releases']),
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   createRelease
 );
 
@@ -33,6 +35,7 @@ router.patch('/:id',
   checkJwt, 
   checkPermissions(['write:releases']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateRelease
 );
 
@@ -41,6 +44,7 @@ router.put('/:id',
   checkJwt, 
   checkPermissions(['write:releases']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateRelease
 );
 

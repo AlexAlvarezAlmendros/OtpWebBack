@@ -6,6 +6,7 @@ const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const connectDB = require('../utils/dbConnection');
+const { uploadImageToImgBB } = require('../utils/imageUpload');
 
 // Helper function to validate licenses
 const validateLicenses = (licenses) => {
@@ -147,6 +148,11 @@ const createBeat = async (req, res) => {
         // No usar el usuario autenticado como productor
         const beatData = { ...req.body };
         
+        // Si se subió una imagen de portada, subirla a ImgBB
+        if (req.file) {
+            beatData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+        }
+        
         // Si viene el campo 'artists', usar el primer artista como productor
         // (asumiendo que 'producer' debe ser un solo ID y 'artists' es un array)
         if (beatData.artists && Array.isArray(beatData.artists) && beatData.artists.length > 0) {
@@ -189,6 +195,13 @@ const updateBeat = async (req, res) => {
     try {
         const userAuth = req.auth || req.user;
         const auth0Id = userAuth.sub;
+        
+        let updateData = { ...req.body };
+        
+        // Si se subió una nueva imagen de portada, subirla a ImgBB
+        if (req.file) {
+            updateData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+        }
 
         // Si no es admin, verificar que sea el dueño del recurso
         if (!isUserAdmin(userAuth)) {
@@ -210,8 +223,8 @@ const updateBeat = async (req, res) => {
         }
         
         // Validar licenses si están presentes en el update
-        if (req.body.licenses && req.body.licenses.length > 0) {
-            const validationErrors = validateLicenses(req.body.licenses);
+        if (updateData.licenses && updateData.licenses.length > 0) {
+            const validationErrors = validateLicenses(updateData.licenses);
             if (validationErrors.length > 0) {
                 return res.status(400).json({
                     error: 'Validación de licencias fallida',
@@ -220,7 +233,7 @@ const updateBeat = async (req, res) => {
             }
         }
         
-        const beat = await Beat.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+        const beat = await Beat.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!beat) {
             return res.status(404).json({ error: 'Beat no encontrado' });
         }

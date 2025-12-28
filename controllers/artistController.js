@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
+const { uploadImageToImgBB } = require('../utils/imageUpload');
 
 // GET all artists with filtering
 const getArtists = async (req, res) => {
@@ -91,8 +92,16 @@ const createArtist = async (req, res) => {
         const user = req.auth || req.user;
         const userId = user.sub;
         
+        let imageUrl = req.body.img;
+        
+        // Si se subió una imagen, subirla a ImgBB
+        if (req.file) {
+            imageUrl = await uploadImageToImgBB(req.file.buffer, req.body.name);
+        }
+        
         const artistData = {
             ...req.body,
+            img: imageUrl,
             userId: userId // Asegurar que el userId viene del token
         };
         
@@ -115,6 +124,13 @@ const updateArtist = async (req, res) => {
         const user = req.auth || req.user;
         const userId = user.sub;
         
+        let updateData = { ...req.body };
+        
+        // Si se subió una nueva imagen, subirla a ImgBB
+        if (req.file) {
+            updateData.img = await uploadImageToImgBB(req.file.buffer, req.body.name);
+        }
+        
         // Si no es admin, verificar que sea el dueño del recurso
         if (!isUserAdmin(user)) {
             const existingArtist = await Artist.findById(id);
@@ -126,7 +142,7 @@ const updateArtist = async (req, res) => {
             }
         }
         
-        const artist = await Artist.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+        const artist = await Artist.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!artist) {
             return res.status(404).json({ error: 'Artista no encontrado' });
         }

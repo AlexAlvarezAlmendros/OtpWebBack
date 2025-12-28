@@ -1,4 +1,5 @@
 const express = require('express');
+const imageUpload = require('../middleware/imageUpload');
 const {
     getArtists,
     getArtist,
@@ -20,7 +21,8 @@ router.get('/:id', getArtist);
 // POST (crear) un nuevo artista (requiere autenticación y permisos)
 router.post('/', 
   checkJwt, 
-  checkPermissions(['write:artists']), 
+  checkPermissions(['write:artists']),
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   createArtist
 );
 
@@ -29,6 +31,7 @@ router.patch('/:id',
   checkJwt, 
   checkPermissions(['write:artists']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateArtist
 );
 
@@ -37,6 +40,7 @@ router.put('/:id',
   checkJwt, 
   checkPermissions(['write:artists']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateArtist
 );
 

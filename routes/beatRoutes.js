@@ -1,4 +1,5 @@
 const express = require('express');
+const imageUpload = require('../middleware/imageUpload');
 const {
     getBeats,
     getBeat,
@@ -28,7 +29,8 @@ router.get('/:id', getBeat);
 // POST (create) a new beat (requires auth and permissions)
 router.post('/', 
   checkJwt, 
-  checkPermissions(['write:beats']), 
+  checkPermissions(['write:beats']),
+  imageUpload.single('image'), // Acepta campo 'image' opcional para coverUrl
   createBeat
 );
 
@@ -37,6 +39,7 @@ router.patch('/:id',
   checkJwt, 
   checkPermissions(['write:beats']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional para coverUrl
   updateBeat
 );
 
@@ -45,6 +48,7 @@ router.put('/:id',
   checkJwt, 
   checkPermissions(['write:beats']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional para coverUrl
   updateBeat
 );
 

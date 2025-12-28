@@ -3,6 +3,41 @@ const mongoose = require('mongoose');
 const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
 const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = require('../utils/filterHelpers');
+const axios = require('axios');
+const FormData = require('form-data');
+
+// Helper function para subir imagen a ImgBB
+const uploadImageToImgBB = async (imageBuffer, imageName) => {
+    const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
+    
+    if (!IMGBB_API_KEY) {
+        throw new Error('API Key de ImgBB no configurada');
+    }
+
+    const base64Image = imageBuffer.toString('base64');
+    const formData = new FormData();
+    formData.append('image', base64Image);
+    
+    if (imageName) {
+        formData.append('name', imageName);
+    }
+
+    const response = await axios.post(
+        `https://api.imgbb.com/1/upload?key=${IMGBB_API_KEY}`,
+        formData,
+        {
+            headers: formData.getHeaders(),
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        }
+    );
+
+    if (response.data.success) {
+        return response.data.data.url;
+    } else {
+        throw new Error('Error al subir imagen a ImgBB');
+    }
+};
 
 // GET all releases with filtering
 const getReleases = async (req, res) => {
@@ -72,8 +107,16 @@ const createRelease = async (req, res) => {
         const user = req.auth || req.user;
         const userId = user.sub;
         
+        let imageUrl = req.body.img;
+        
+        // Si se subió una imagen, subirla a ImgBB
+        if (req.file) {
+            imageUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+        }
+        
         const releaseData = {
             ...req.body,
+            img: imageUrl,
             userId: userId // Asegurar que el userId viene del token
         };
         
@@ -108,7 +151,14 @@ const updateRelease = async (req, res) => {
             }
         }
         
-        const release = await Release.findByIdAndUpdate(id, req.body, { new: true, runValidators: true });
+        let updateData = { ...req.body };
+        
+        // Si se subió una nueva imagen, subirla a ImgBB
+        if (req.file) {
+            updateData.img = await uploadImageToImgBB(req.file.buffer, req.body.title);
+        }
+        
+        const release = await Release.findByIdAndUpdate(id, updateData, { new: true, runValidators: true });
         if (!release) {
             return res.status(404).json({ error: 'Release no encontrado' });
         }

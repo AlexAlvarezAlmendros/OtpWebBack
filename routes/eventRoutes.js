@@ -1,4 +1,5 @@
 const express = require('express');
+const imageUpload = require('../middleware/imageUpload');
 const {
     getEvents,
     getEvent,
@@ -20,7 +21,8 @@ router.get('/:id', getEvent);
 // POST (crear) un nuevo evento (requiere autenticación y permisos)
 router.post('/', 
   checkJwt, 
-  checkPermissions(['write:events']), 
+  checkPermissions(['write:events']),
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   createEvent
 );
 
@@ -29,6 +31,7 @@ router.patch('/:id',
   checkJwt, 
   checkPermissions(['write:events']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateEvent
 );
 
@@ -37,6 +40,7 @@ router.put('/:id',
   checkJwt, 
   checkPermissions(['write:events']), 
   checkOwnership,
+  imageUpload.single('image'), // Acepta campo 'image' opcional
   updateEvent
 );
 
