@@ -12,6 +12,12 @@ const { uploadImageToImgBB } = require('../utils/imageUpload');
 const validateLicenses = (licenses) => {
     const errors = [];
     
+    // Ensure licenses is an array
+    if (!Array.isArray(licenses)) {
+        errors.push('Licenses debe ser un array');
+        return errors;
+    }
+    
     licenses.forEach((license, index) => {
         // Validar que tenga nombre
         if (!license.name || license.name.trim() === '') {
@@ -158,6 +164,18 @@ const createBeat = async (req, res) => {
         if (beatData.artists && Array.isArray(beatData.artists) && beatData.artists.length > 0) {
             beatData.producer = beatData.artists[0];
             console.log(`👤 Producer set from artists field: ${beatData.producer}`);
+        }
+        
+        // Parse licenses if it comes as a string
+        if (beatData.licenses && typeof beatData.licenses === 'string') {
+            try {
+                beatData.licenses = JSON.parse(beatData.licenses);
+            } catch (e) {
+                return res.status(400).json({
+                    error: 'Licenses debe ser un array JSON válido',
+                    details: e.message
+                });
+            }
         }
         
         // Validar licenses si están presentes
