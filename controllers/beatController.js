@@ -7,6 +7,7 @@ const { buildFilter, buildQueryOptions, validateFilters, FILTER_CONFIGS } = requ
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const connectDB = require('../utils/dbConnection');
 const { uploadImageToImgBB } = require('../utils/imageUpload');
+const licenseService = require('../services/licenseService');
 
 // Helper function to validate licenses
 const validateLicenses = (licenses) => {
@@ -562,7 +563,7 @@ const handleBeatWebhook = async (req, res) => {
         console.log('📂 Files and terms retrieved from database');
         
         // Save purchase to database
-        await Purchase.create({
+        const purchase = await Purchase.create({
             beatId,
             licenseId,
             customerEmail,
@@ -575,7 +576,44 @@ const handleBeatWebhook = async (req, res) => {
         
         console.log('✅ Purchase saved to database');
         
-        // Send email with beat files
+        // Map license name to tier (Basic/Premium/Unlimited)
+        const licenseTier = mapLicenseNameToTier(licenseName);
+        console.log('📋 License tier determined:', licenseTier);
+        
+        // Issue license and generate PDF
+        let licensePdfBuffer = null;
+        let issuedLicenseData = null;
+        
+        try {
+            console.log('📝 Issuing license...');
+            const issuedLicense = await licenseService.issueLicense({
+                orderId: purchase._id,
+                stripeSessionId: session.id,
+                beatId: beat._id,
+                beatTitle: beat.title,
+                beatBpm: beat.bpm,
+                beatKey: beat.key,
+                tier: licenseTier,
+                buyerLegalName: customerName,
+                buyerEmail: customerEmail,
+                amount: session.amount_total / 100,
+                currency: 'EUR'
+            });
+            
+            console.log('✅ License issued:', issuedLicense.licenseNumber);
+            issuedLicenseData = issuedLicense;
+            
+            // Generate PDF
+            console.log('📄 Generating license PDF...');
+            licensePdfBuffer = await licenseService.generateLicensePDF(issuedLicense);
+            console.log('✅ License PDF generated');
+            
+        } catch (licenseError) {
+            console.error('❌ Error generating license:', licenseError);
+            // Continue with email without license if there's an error
+        }
+        
+        // Send email with beat files and license
         const EmailService = require('../services/emailService');
         const emailService = new EmailService();
         
@@ -586,7 +624,9 @@ const handleBeatWebhook = async (req, res) => {
             licenseName,
             formats: formatsArray,
             files: files,
-            licenseTerms: terms
+            licenseTerms: terms,
+            licensePdf: licensePdfBuffer,
+            licenseNumber: issuedLicenseData ? issuedLicenseData.licenseNumber : null
         });
         
         console.log('✅ Beat delivery email sent to:', customerEmail);
@@ -601,6 +641,29 @@ const handleBeatWebhook = async (req, res) => {
     }
     
     res.json({ received: true });
+};
+
+/**
+ * Helper function to map license name to tier
+ * Maps the license name from the beat to the standard tier names
+ */
+const mapLicenseNameToTier = (licenseName) => {
+    const name = licenseName.toLowerCase();
+    
+    // Map common license names to tiers
+    if (name.includes('básica') || name.includes('basica') || name.includes('basic')) {
+        return 'Basic';
+    }
+    if (name.includes('premium')) {
+        return 'Premium';
+    }
+    if (name.includes('unlimited') || name.includes('ilimitada')) {
+        return 'Unlimited';
+    }
+    
+    // Default to Basic if no match
+    console.warn(`⚠️  Unknown license name: ${licenseName}, defaulting to Basic`);
+    return 'Basic';
 };
 
 module.exports = {

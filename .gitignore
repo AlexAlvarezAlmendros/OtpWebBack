@@ -94,6 +94,10 @@ public
 tmp/
 temp/
 
+# Test output files
+output/
+*.pdf
+
 # Logs
 logs
 *.log

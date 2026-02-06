@@ -6,7 +6,9 @@
     "test": "jest",
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "migrate:tickets": "node migrations/add-tickets-to-events.js"
+    "migrate:tickets": "node migrations/add-tickets-to-events.js",
+    "migrate:licenses": "node migrations/init-license-templates.js",
+    "test:license": "node tests/test-license-generation.js"
   },
   "keywords": [],
   "author": "",

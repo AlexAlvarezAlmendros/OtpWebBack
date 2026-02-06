@@ -660,7 +660,7 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
     /**
      * Send Beat Delivery Email with download links
      */
-    async sendBeatDeliveryEmail({ to, customerName, beatTitle, licenseName, formats, files, licenseTerms }) {
+    async sendBeatDeliveryEmail({ to, customerName, beatTitle, licenseName, formats, files, licenseTerms, licensePdf = null, licenseNumber = null }) {
         try {
             if (!this.transporter) {
                 throw new Error('Email service not initialized. Please check Gmail configuration.');
@@ -670,6 +670,9 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
             console.log('   Beat:', beatTitle);
             console.log('   License:', licenseName);
             console.log('   Formats:', formats.join(', '));
+            if (licensePdf) {
+                console.log('   📄 License PDF will be attached');
+            }
 
             // Generate HTML using React Email template
             let emailHtml;
@@ -681,11 +684,12 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
                         licenseName,
                         formats,
                         files,
-                        licenseTerms
+                        licenseTerms,
+                        licenseNumber
                     })
                 );
             } else {
-                emailHtml = this.generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms);
+                emailHtml = this.generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms, licenseNumber);
             }
 
             const emailOptions = {
@@ -698,6 +702,16 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
                 html: emailHtml,
                 text: this.generateBeatDeliveryText(customerName, beatTitle, licenseName, formats, files, licenseTerms)
             };
+
+            // Add PDF attachment if provided
+            if (licensePdf) {
+                emailOptions.attachments = [{
+                    filename: `Licencia-${licenseNumber || 'Beat'}.pdf`,
+                    content: licensePdf,
+                    contentType: 'application/pdf'
+                }];
+                console.log('   ✅ PDF attachment added to email');
+            }
 
             const result = await this.transporter.sendMail(emailOptions);
             
@@ -714,7 +728,7 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
         }
     }
 
-    generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms) {
+    generateBeatDeliveryTemplate(customerName, beatTitle, licenseName, formats, files, licenseTerms, licenseNumber = null) {
         // Format license terms for display
         const formatTerm = (value) => {
             if (value === 'unlimited' || value === 0 || value === '0') {
@@ -722,6 +736,14 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
             }
             return value;
         };
+
+        const licenseSection = licenseNumber ? `
+            <div style="background-color: #0e0e0e; border: 1px solid #ff003c; border-radius: 8px; padding: 15px; margin: 20px 0; text-align: center;">
+                <p style="color: #ff003c; font-weight: bold; margin: 0;">📄 Licencia Incluida</p>
+                <p style="color: #fff; margin: 5px 0;">Número: ${licenseNumber}</p>
+                <p style="color: #999; font-size: 12px; margin: 5px 0;">Tu licencia está adjunta a este email en formato PDF</p>
+            </div>
+        ` : '';
 
         return `
         <!DOCTYPE html>
@@ -850,6 +872,8 @@ Fecha de compra: ${ticket.createdAt ? new Date(ticket.createdAt).toLocaleString(
                     <p>Hola <strong>${customerName}</strong>,</p>
                     
                     <p>Tu compra se ha completado exitosamente. Aquí están los detalles:</p>
+                    
+                    ${licenseSection}
                     
                     <div class="beat-details">
                         <h2>${beatTitle}</h2>

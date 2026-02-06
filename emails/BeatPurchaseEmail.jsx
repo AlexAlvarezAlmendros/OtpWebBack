@@ -21,7 +21,8 @@ export const BeatPurchaseEmail = ({
   licenseName = '',
   formats = [],
   files = {},
-  licenseTerms = {}
+  licenseTerms = {},
+  licenseNumber = null
 }) => {
   const mainStyle = {
     backgroundColor: '#000000',
@@ -154,6 +155,43 @@ export const BeatPurchaseEmail = ({
             <Text style={{ fontSize: '16px', lineHeight: '1.6' }}>
               Tu compra se ha completado exitosamente. Aquí están los detalles:
             </Text>
+
+            {/* License Notice */}
+            {licenseNumber && (
+              <div style={{
+                backgroundColor: '#0e0e0e',
+                border: '2px solid #ff003c',
+                borderRadius: '8px',
+                padding: '20px',
+                margin: '20px 0',
+                textAlign: 'center'
+              }}>
+                <Text style={{
+                  color: '#ff003c',
+                  fontSize: '18px',
+                  fontWeight: 'bold',
+                  margin: '0 0 8px'
+                }}>
+                  📄 Licencia Incluida
+                </Text>
+                <Text style={{
+                  color: '#ffffff',
+                  fontSize: '16px',
+                  margin: '8px 0'
+                }}>
+                  Número: {licenseNumber}
+                </Text>
+                <Text style={{
+                  color: '#999999',
+                  fontSize: '14px',
+                  margin: '8px 0 0',
+                  lineHeight: '1.5'
+                }}>
+                  Tu licencia oficial está adjunta a este email en formato PDF. 
+                  Guárdala en un lugar seguro como prueba de tu compra.
+                </Text>
+              </div>
+            )}
 
             {/* Beat Details */}
             <div style={beatDetailsBoxStyle}>

@@ -18,6 +18,7 @@ const cronRoutes = require('./routes/cronRoutes');
 const healthRoutes = require('./routes/healthRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const imageRoutes = require('./routes/imageRoutes');
+const licenseRoutes = require('./routes/licenseRoutes');
 
 const app = express();
 
@@ -111,6 +112,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/cron', cronRoutes);
 app.use('/api/images', imageRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/licenses', licenseRoutes);
 
 // Middleware de manejo de errores JWT
 app.use((err, req, res, next) => {
