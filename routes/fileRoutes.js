@@ -5,13 +5,25 @@ const {
   uploadArchive,
   uploadAudioFile,
   uploadArchiveFile,
+  createFileRecord,
   getAllFiles,
   getFileById,
   updateFile,
   deleteFile,
   getDownloadUrl,
-  handleMulterError
+  handleMulterError,
+  generateSignedUploadParams,
+  testCloudinaryConnection
 } = require('../controllers/fileController');
+
+// Ruta de diagnóstico para verificar configuración de Cloudinary
+router.get('/cloudinary/test', testCloudinaryConnection);
+
+// Ruta para obtener parámetros de subida firmados (para archivos >10MB)
+router.get('/upload/signed-params', generateSignedUploadParams);
+
+// Ruta para registrar archivo después de signed upload directo a Cloudinary
+router.post('/', createFileRecord);
 
 // Rutas para subir archivos (con manejo de errores de multer)
 router.post('/upload/audio', (req, res, next) => {

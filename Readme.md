@@ -49,6 +49,18 @@ Para el envío de tickets y confirmaciones por email:
    - `EMAIL_FROM_NAME`: Nombre del remitente (opcional)
    - `EMAIL_FROM_ADDRESS`: Email del remitente (opcional)
 
+#### Configuración de Cloudinary (Gestión de Archivos)
+Para habilitar la subida de archivos de audio y archivos comprimidos:
+
+1. Crea una cuenta en [Cloudinary](https://cloudinary.com)
+2. Obtén tus credenciales desde el Dashboard
+3. Configura las siguientes variables:
+   - `CLOUDINARY_CLOUD_NAME`: Nombre de tu cloud
+   - `CLOUDINARY_API_KEY`: API Key
+   - `CLOUDINARY_API_SECRET`: API Secret
+
+📖 **Para implementar signed uploads (archivos >10MB), consulta [SIGNED_UPLOADS_GUIDE.md](./SIGNED_UPLOADS_GUIDE.md)**
+
 ### Instalación
 
 ```bash
@@ -139,11 +151,14 @@ Cuando se usan filtros, la respuesta incluye metadatos de paginación:
 
 La API proporciona operaciones CRUD estándar para los siguientes recursos:
 
-- Releases
-- Artists  
-- Events
-- Studios
-- **Tickets** (Sistema de venta de entradas con Stripe)
+- **Releases** - Gestión de lanzamientos musicales
+- **Artists** - Gestión de artistas
+- **Events** - Gestión de eventos
+- **Studios** - Gestión de estudios
+- **Tickets** - Sistema de venta de entradas con Stripe
+- **Files** - Sistema de gestión de archivos (audio y archivos comprimidos) con Cloudinary
+- **Beats** - Marketplace de beats con sistema de pagos
+- **Newsletter** - Sistema de suscripción y envío de newsletters
 
 ---
 
@@ -305,6 +320,157 @@ curl -X POST https://tu-api.com/api/spotify/release-info \
 - **Tipos de URL soportados**: Solo URLs de artistas y álbumes de Spotify
 - **Autenticación**: Requiere credenciales de Spotify configuradas en el servidor
 - **Mapeo de Tipos**: Singles se mapean como "Song", álbumes y compilaciones como "Album"
+
+---
+
+## Sistema de Archivos y Signed Uploads 📁
+
+La API incluye un sistema completo para gestionar archivos de audio y archivos comprimidos usando **Cloudinary**. Soporta tanto uploads tradicionales (hasta 10MB) como **signed uploads** para archivos grandes (hasta 100MB).
+
+### Configuración de Cloudinary
+
+En tu archivo `.env`, configura:
+```bash
+CLOUDINARY_CLOUD_NAME=tu_cloud_name
+CLOUDINARY_API_KEY=tu_api_key
+CLOUDINARY_API_SECRET=tu_api_secret
+```
+
+### Files Endpoints
+
+**Ruta Base**: `/api/files`
+
+| Método | Ruta                           | Auth | Descripción                                      |
+|--------|--------------------------------|------|--------------------------------------------------|
+| GET    | `/upload/signed-params`        | No   | Obtener parámetros firmados para upload directo  |
+| POST   | `/upload/audio`                | No   | Subir archivo de audio (tradicional, max 10MB)  |
+| POST   | `/upload/archive`              | No   | Subir archivo comprimido (tradicional, max 10MB)|
+| GET    | `/`                            | No   | Listar todos los archivos                        |
+| GET    | `/:id`                         | No   | Obtener información de un archivo                |
+| GET    | `/:id/download`                | No   | Obtener URL de descarga temporal (1 hora)        |
+| PATCH  | `/:id`                         | No   | Actualizar metadata del archivo                  |
+| DELETE | `/:id`                         | No   | Eliminar archivo                                 |
+
+### 🚀 Signed Uploads (Archivos Grandes >10MB)
+
+Para subir archivos de 10MB a 100MB, usa el método de **signed uploads** que permite subir directamente a Cloudinary desde el frontend:
+
+#### Paso 1: Obtener Parámetros Firmados
+
+```bash
+GET /api/files/upload/signed-params?folder=audio_files&resourceType=video
+```
+
+**Query Parameters:**
+- `folder`: `audio_files` o `archive_files`
+- `resourceType`: `video` (para audio) o `raw` (para archivos)
+
+**Respuesta (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "signature": "abc123...",
+    "timestamp": 1709740800,
+    "folder": "audio_files",
+    "resource_type": "video",
+    "api_key": "tu_api_key",
+    "cloud_name": "tu_cloud_name",
+    "upload_url": "https://api.cloudinary.com/v1_1/tu_cloud_name/video/upload"
+  },
+  "message": "Parámetros de subida generados exitosamente. Válidos por 1 hora."
+}
+```
+
+#### Paso 2: Subir Directamente a Cloudinary
+
+Desde el frontend, usa estos parámetros para subir:
+
+```javascript
+const formData = new FormData();
+formData.append('file', yourFile);
+formData.append('api_key', uploadParams.api_key);
+formData.append('timestamp', uploadParams.timestamp);
+formData.append('signature', uploadParams.signature);
+formData.append('folder', uploadParams.folder);
+
+const response = await fetch(uploadParams.upload_url, {
+  method: 'POST',
+  body: formData
+});
+
+const result = await response.json();
+// result contiene: url, secure_url, public_id, bytes, duration, etc.
+```
+
+### 📋 Ejemplos de Uso
+
+#### Ejemplo: Upload Tradicional (Audio)
+
+```bash
+POST /api/files/upload/audio
+Content-Type: multipart/form-data
+
+file: [archivo .mp3/.wav/.ogg/.flac]
+description: "Demo del nuevo single"
+tags: ["demo", "single"]
+isPublic: true
+uploadedBy: "user123"
+```
+
+#### Ejemplo: Obtener Archivos con Filtros
+
+```bash
+GET /api/files?fileType=audio&uploadedBy=user123&count=20&page=1
+```
+
+#### Ejemplo: Obtener URL de Descarga Temporal
+
+```bash
+GET /api/files/65a1b2c3d4e5f6789012345/download
+```
+
+**Respuesta:**
+```json
+{
+  "success": true,
+  "data": {
+    "downloadUrl": "https://res.cloudinary.com/...",
+    "expiresIn": "1 hour",
+    "filename": "audio_files/abc123"
+  }
+}
+```
+
+### 📖 Documentación Completa
+
+Para ejemplos de implementación en React, Vue, Angular y vanilla JavaScript, consulta:
+- **[SIGNED_UPLOADS_GUIDE.md](./SIGNED_UPLOADS_GUIDE.md)** - Guía completa con ejemplos de código
+- **[examples/test-signed-upload.html](./examples/test-signed-upload.html)** - Herramienta de prueba en HTML
+
+### 🎯 Tipos de Archivos Soportados
+
+#### Audio Files (`folder: audio_files`, `resourceType: video`)
+- ✅ MP3 (audio/mpeg)
+- ✅ WAV (audio/wav, audio/x-wav)
+- ✅ OGG (audio/ogg)
+- ✅ FLAC (audio/flac)
+- **Límite**: 100MB con signed upload, 10MB sin firma
+
+#### Archive Files (`folder: archive_files`, `resourceType: raw`)
+- ✅ ZIP (application/zip)
+- ✅ RAR (application/x-rar-compressed)
+- ✅ 7Z (application/x-7z-compressed)
+- **Límite**: 10MB (plan gratuito de Cloudinary)
+
+### ⚠️ Límites del Plan Free de Cloudinary
+
+| Recurso | Límite |
+|---------|--------|
+| Almacenamiento | 25 GB |
+| Ancho de banda mensual | 25 GB/mes |
+| Tamaño máximo (sin firma) | 10 MB |
+| Tamaño máximo (con firma) | 100 MB |
 
 ---
 
