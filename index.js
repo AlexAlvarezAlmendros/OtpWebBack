@@ -34,9 +34,31 @@ app.post('/api/beats/webhook',
   require('./controllers/beatController').handleBeatWebhook
 );
 
-// Middlewares
+// Configuración de CORS - Permitir múltiples orígenes
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://www.otherpeople.es',
+  'https://otherpeople.es'
+];
+
+// Si hay una variable de entorno FRONTEND_URL, agregarla también
+if (process.env.FRONTEND_URL) {
+  allowedOrigins.push(process.env.FRONTEND_URL);
+}
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173', // URL del frontend
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`❌ CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']

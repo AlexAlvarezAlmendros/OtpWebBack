@@ -154,6 +154,25 @@ const createBeat = async (req, res) => {
         // No usar el usuario autenticado como productor
         const beatData = { ...req.body };
         
+        // Parse tags if it comes as a malformed array
+        if (beatData.tags && Array.isArray(beatData.tags)) {
+            beatData.tags = beatData.tags.flatMap(tag => {
+                if (typeof tag === 'string') {
+                    try {
+                        // Si es un string JSON, parsearlo
+                        const parsed = JSON.parse(tag);
+                        return Array.isArray(parsed) ? parsed : [tag];
+                    } catch (e) {
+                        // Si no es JSON válido, mantenerlo como string
+                        return [tag];
+                    }
+                }
+                return [tag];
+            }).filter(tag => tag && tag.trim && tag.trim() !== '');
+            
+            console.log('🏷️ Tags después de procesar:', beatData.tags);
+        }
+        
         // Si se subió una imagen de portada, subirla a ImgBB
         if (req.file) {
             beatData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
@@ -178,14 +197,27 @@ const createBeat = async (req, res) => {
             }
         }
         
-        // Validar licenses si están presentes
-        if (beatData.licenses && beatData.licenses.length > 0) {
-            const validationErrors = validateLicenses(beatData.licenses);
-            if (validationErrors.length > 0) {
-                return res.status(400).json({
-                    error: 'Validación de licencias fallida',
-                    details: validationErrors
-                });
+        // Filtrar licencias vacías o null antes de validar
+        if (beatData.licenses && Array.isArray(beatData.licenses)) {
+            beatData.licenses = beatData.licenses.filter(license => 
+                license && typeof license === 'object' && Object.keys(license).length > 0
+            );
+            
+            console.log('🔍 Licenses después de filtrar:', beatData.licenses);
+            
+            // Validar licenses solo si hay licencias válidas
+            if (beatData.licenses.length > 0) {
+                const validationErrors = validateLicenses(beatData.licenses);
+                if (validationErrors.length > 0) {
+                    console.log('❌ Errores de validación de licencias:', validationErrors);
+                    return res.status(400).json({
+                        error: 'Validación de licencias fallida',
+                        details: validationErrors
+                    });
+                }
+            } else {
+                // Si no hay licencias válidas, eliminar el campo o dejarlo vacío
+                beatData.licenses = [];
             }
         }
         
@@ -216,9 +248,42 @@ const updateBeat = async (req, res) => {
         
         let updateData = { ...req.body };
         
+        console.log('📋 UpdateData antes de procesar:', JSON.stringify(updateData, null, 2));
+        
+        // Parse tags if it comes as a malformed array
+        if (updateData.tags && Array.isArray(updateData.tags)) {
+            updateData.tags = updateData.tags.flatMap(tag => {
+                if (typeof tag === 'string') {
+                    try {
+                        // Si es un string JSON, parsearlo
+                        const parsed = JSON.parse(tag);
+                        return Array.isArray(parsed) ? parsed : [tag];
+                    } catch (e) {
+                        // Si no es JSON válido, mantenerlo como string
+                        return [tag];
+                    }
+                }
+                return [tag];
+            }).filter(tag => tag && tag.trim && tag.trim() !== '');
+            
+            console.log('🏷️ Tags después de procesar:', updateData.tags);
+        }
+        
         // Si se subió una nueva imagen de portada, subirla a ImgBB
         if (req.file) {
             updateData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+        }
+        
+        // Parse licenses if it comes as a string
+        if (updateData.licenses && typeof updateData.licenses === 'string') {
+            try {
+                updateData.licenses = JSON.parse(updateData.licenses);
+            } catch (e) {
+                return res.status(400).json({
+                    error: 'Licenses debe ser un array JSON válido',
+                    details: e.message
+                });
+            }
         }
 
         // Si no es admin, verificar que sea el dueño del recurso
@@ -240,14 +305,25 @@ const updateBeat = async (req, res) => {
             }
         }
         
-        // Validar licenses si están presentes en el update
-        if (updateData.licenses && updateData.licenses.length > 0) {
-            const validationErrors = validateLicenses(updateData.licenses);
-            if (validationErrors.length > 0) {
-                return res.status(400).json({
-                    error: 'Validación de licencias fallida',
-                    details: validationErrors
-                });
+        // Filtrar y validar licenses si están presentes en el update
+        if (updateData.licenses && Array.isArray(updateData.licenses)) {
+            // Filtrar licencias vacías o null
+            updateData.licenses = updateData.licenses.filter(license => 
+                license && typeof license === 'object' && Object.keys(license).length > 0
+            );
+            
+            console.log('🔍 Licenses después de filtrar en update:', updateData.licenses);
+            
+            // Validar solo si hay licencias válidas
+            if (updateData.licenses.length > 0) {
+                const validationErrors = validateLicenses(updateData.licenses);
+                if (validationErrors.length > 0) {
+                    console.log('❌ Errores de validación de licencias en update:', validationErrors);
+                    return res.status(400).json({
+                        error: 'Validación de licencias fallida',
+                        details: validationErrors
+                    });
+                }
             }
         }
         
