@@ -25,6 +25,11 @@ router.get('/upload/signed-params', generateSignedUploadParams);
 // Ruta para registrar archivo después de signed upload directo a Cloudinary
 router.post('/', createFileRecord);
 
+// Manejar preflight request para upload de audio
+router.options('/upload/audio', (req, res) => {
+  res.status(204).end();
+});
+
 // Rutas para subir archivos (con manejo de errores de multer)
 router.post('/upload/audio', (req, res, next) => {
   uploadAudio.single('file')(req, res, (err) => {
@@ -33,6 +38,11 @@ router.post('/upload/audio', (req, res, next) => {
     }
     uploadAudioFile(req, res, next);
   });
+});
+
+// Manejar preflight request para upload de archive
+router.options('/upload/archive', (req, res) => {
+  res.status(204).end();
 });
 
 router.post('/upload/archive', (req, res, next) => {

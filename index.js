@@ -47,7 +47,7 @@ if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
 }
 
-app.use(cors({
+const corsOptions = {
   origin: function (origin, callback) {
     // Permitir requests sin origin (como mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
@@ -56,25 +56,17 @@ app.use(cors({
       callback(null, true);
     } else {
       console.log(`❌ CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
+      callback(null, false);
     }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
-}));
+  allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept'],
+  optionsSuccessStatus: 204,
+  preflightContinue: false
+};
 
-// Manejar preflight requests explícitamente para todas las rutas
-app.use((req, res, next) => {
-  if (req.method === 'OPTIONS') {
-    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Origin, X-Requested-With, Accept');
-    res.header('Access-Control-Allow-Credentials', 'true');
-    return res.sendStatus(204);
-  }
-  next();
-});
+app.use(cors(corsOptions));
 
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
