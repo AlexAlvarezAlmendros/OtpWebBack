@@ -64,6 +64,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'X-Requested-With', 'Accept']
 }));
 
+// Manejar preflight requests explícitamente
+app.options('*', cors());
+
 app.use(express.json()); // Para parsear el body de las peticiones a JSON
 
 // Logging de todas las requests (después de express.json para que no interfiera con webhooks)
