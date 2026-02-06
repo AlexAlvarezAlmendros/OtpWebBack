@@ -2,6 +2,7 @@ const cloudinary = require('cloudinary').v2;
 const multer = require('multer');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const File = require('../models/File');
+const connectDB = require('../utils/dbConnection');
 
 // Configurar Cloudinary
 cloudinary.config({
@@ -307,6 +308,9 @@ const uploadArchiveFile = async (req, res) => {
 // Crear registro de archivo después de signed upload directo a Cloudinary
 const createFileRecord = async (req, res) => {
   try {
+    // Asegurar conexión a base de datos (para Vercel)
+    await connectDB();
+    
     const {
       filename,
       originalName,
@@ -383,6 +387,9 @@ const createFileRecord = async (req, res) => {
 // Obtener todos los archivos (con paginación y filtros)
 const getAllFiles = async (req, res) => {
   try {
+    // Asegurar conexión a base de datos (para Vercel)
+    await connectDB();
+    
     const { 
       page = 1, 
       limit = 20, 
@@ -433,6 +440,9 @@ const getAllFiles = async (req, res) => {
 // Obtener un archivo por ID
 const getFileById = async (req, res) => {
   try {
+    // Asegurar conexión a base de datos (para Vercel)
+    await connectDB();
+    
     const file = await File.findById(req.params.id);
 
     if (!file) {
@@ -499,6 +509,9 @@ const updateFile = async (req, res) => {
 // Eliminar archivo
 const deleteFile = async (req, res) => {
   try {
+    // Asegurar conexión a base de datos (para Vercel)
+    await connectDB();
+    
     const file = await File.findById(req.params.id);
 
     if (!file) {
@@ -534,6 +547,9 @@ const deleteFile = async (req, res) => {
 // Descargar/obtener URL de descarga del archivo
 const getDownloadUrl = async (req, res) => {
   try {
+    // Asegurar conexión a base de datos (para Vercel)
+    await connectDB();
+    
     const file = await File.findById(req.params.id);
 
     if (!file) {
