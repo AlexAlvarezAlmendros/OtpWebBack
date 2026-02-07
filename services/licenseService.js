@@ -1,7 +1,6 @@
 const PDFDocument = require('pdfkit');
 const QRCode = require('qrcode');
 const crypto = require('crypto');
-const { v4: uuidv4 } = require('uuid');
 const LicenseTemplate = require('../models/LicenseTemplate');
 const IssuedLicense = require('../models/IssuedLicense');
 const fs = require('fs');
@@ -142,7 +141,7 @@ class LicenseService {
         const template = await this.getLicenseTemplate(tier);
         
         // Generate unique identifiers
-        const licenseId = uuidv4();
+        const licenseId = crypto.randomUUID();
         const licenseNumber = await this.generateLicenseNumber();
         
         // Create license data
