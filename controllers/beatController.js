@@ -444,6 +444,7 @@ const createCheckoutSession = async (req, res) => {
                 quantity: 1
             }],
             mode: 'payment',
+            allow_promotion_codes: true,
             success_url: `${process.env.FRONTEND_URL}/beats?success=true&session_id={CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_URL}/beats?canceled=true`,
             customer_email: customerEmail,
