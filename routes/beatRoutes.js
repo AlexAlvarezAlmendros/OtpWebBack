@@ -16,10 +16,9 @@ const router = express.Router();
 // GET all beats (public)
 router.get('/', getBeats);
 
-// POST create checkout session for beat purchase (requires auth)
+// POST create checkout session for beat purchase (public - no auth required)
 // IMPORTANTE: Debe estar ANTES de /:id para evitar conflictos
 router.post('/create-checkout-session',
-  checkJwt,
   createCheckoutSession
 );
 
