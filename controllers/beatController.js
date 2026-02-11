@@ -9,6 +9,23 @@ const connectDB = require('../utils/dbConnection');
 const { uploadImageToImgBB } = require('../utils/imageUpload');
 const licenseService = require('../services/licenseService');
 
+// Helper function to sanitize beat data for public responses
+// Only sends mp3 URLs, removes WAV/STEMS download links
+const sanitizeBeatForPublic = (beat) => {
+    const beatObj = beat.toObject ? beat.toObject() : { ...beat };
+    if (beatObj.licenses && Array.isArray(beatObj.licenses)) {
+        beatObj.licenses = beatObj.licenses.map(license => {
+            if (license.files) {
+                license.files = {
+                    mp3Url: license.files.mp3Url || null
+                };
+            }
+            return license;
+        });
+    }
+    return beatObj;
+};
+
 // Helper function to validate licenses
 const validateLicenses = (licenses) => {
     const errors = [];
@@ -111,9 +128,12 @@ const getBeats = async (req, res) => {
         // Get total count for pagination info
         const totalCount = await Beat.countDocuments(filter);
 
+        // Sanitize beats to only include mp3 URLs
+        const sanitizedBeats = beats.map(sanitizeBeatForPublic);
+
         // Response with pagination metadata
         res.status(200).json({
-            data: beats,
+            data: sanitizedBeats,
             pagination: {
                 page: parseInt(req.query.page) || 1,
                 count: options.limit,
@@ -139,7 +159,7 @@ const getBeat = async (req, res) => {
         if (!beat) {
             return res.status(404).json({ error: 'Beat no encontrado' });
         }
-        res.status(200).json(beat);
+        res.status(200).json(sanitizeBeatForPublic(beat));
     } catch (error) {
         console.error(`Error getting beat ${id}:`, error);
         res.status(500).json({ error: error.message });
