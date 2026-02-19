@@ -128,12 +128,16 @@ const getBeats = async (req, res) => {
         // Get total count for pagination info
         const totalCount = await Beat.countDocuments(filter);
 
-        // Sanitize beats to only include mp3 URLs
-        const sanitizedBeats = beats.map(sanitizeBeatForPublic);
+        // Si el usuario está autenticado, devolver datos completos (WAV/ZIP/STEMS)
+        // Si es público, solo devolver MP3
+        const isAuthenticated = !!(req.auth || req.user);
+        const responseBeats = isAuthenticated 
+            ? beats 
+            : beats.map(sanitizeBeatForPublic);
 
         // Response with pagination metadata
         res.status(200).json({
-            data: sanitizedBeats,
+            data: responseBeats,
             pagination: {
                 page: parseInt(req.query.page) || 1,
                 count: options.limit,
@@ -159,7 +163,15 @@ const getBeat = async (req, res) => {
         if (!beat) {
             return res.status(404).json({ error: 'Beat no encontrado' });
         }
-        res.status(200).json(sanitizeBeatForPublic(beat));
+
+        // Si el usuario está autenticado (página de edición), devolver datos completos con WAV/ZIP
+        // Si es público, solo devolver MP3
+        const isAuthenticated = !!(req.auth || req.user);
+        if (isAuthenticated) {
+            res.status(200).json(beat);
+        } else {
+            res.status(200).json(sanitizeBeatForPublic(beat));
+        }
     } catch (error) {
         console.error(`Error getting beat ${id}:`, error);
         res.status(500).json({ error: error.message });

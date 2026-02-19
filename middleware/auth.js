@@ -178,8 +178,25 @@ const requireAdmin = async (req, res, next) => {
   }
 };
 
+// Middleware opcional de JWT: intenta autenticar pero no falla si no hay token
+const optionalJwt = (req, res, next) => {
+  // Si no hay header Authorization, continuar sin autenticar
+  if (!req.headers.authorization) {
+    return next();
+  }
+  // Intentar autenticar; si falla, continuar sin autenticar
+  checkJwt(req, res, (err) => {
+    if (err) {
+      // Token inválido o expirado: continuar como usuario no autenticado
+      return next();
+    }
+    next();
+  });
+};
+
 module.exports = { 
   checkJwt, 
+  optionalJwt,
   logJwtResult, 
   loadUserRole,
   requireStaffOrAdmin,

@@ -8,13 +8,13 @@ const {
     deleteBeat,
     createCheckoutSession
 } = require('../controllers/beatController');
-const { checkJwt } = require('../middleware/auth');
+const { checkJwt, optionalJwt } = require('../middleware/auth');
 const { checkPermissions, checkOwnership } = require('../middleware/permissions');
 
 const router = express.Router();
 
-// GET all beats (public)
-router.get('/', getBeats);
+// GET all beats (public, but returns full file data if authenticated)
+router.get('/', optionalJwt, getBeats);
 
 // POST create checkout session for beat purchase (public - no auth required)
 // IMPORTANTE: Debe estar ANTES de /:id para evitar conflictos
@@ -22,8 +22,8 @@ router.post('/create-checkout-session',
   createCheckoutSession
 );
 
-// GET a single beat by ID (public)
-router.get('/:id', getBeat);
+// GET a single beat by ID (public, but returns full data if authenticated)
+router.get('/:id', optionalJwt, getBeat);
 
 // POST (create) a new beat (requires auth and permissions)
 router.post('/', 
