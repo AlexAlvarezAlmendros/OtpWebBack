@@ -9,7 +9,7 @@ const storage = multer.memoryStorage();
 const uploadImage = multer({
   storage: storage,
   limits: {
-    fileSize: 32 * 1024 * 1024 // 32MB límite de ImgBB
+    fileSize: 4 * 1024 * 1024 // 4MB límite (Vercel serverless max ~4.5MB)
   },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
@@ -108,7 +108,7 @@ const handleImageUploadError = (error, req, res, next) => {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        message: 'La imagen excede el límite de 32MB',
+        message: 'La imagen excede el límite de 4MB. Por favor, reduce el tamaño de la imagen antes de subirla.',
         error: 'LIMIT_FILE_SIZE'
       });
     }

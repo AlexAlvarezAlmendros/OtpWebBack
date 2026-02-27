@@ -5,7 +5,7 @@ const storage = multer.memoryStorage();
 
 const imageUploadMiddleware = multer({
   storage: storage,
-  limits: { fileSize: 32 * 1024 * 1024 }, // 32MB límite de ImgBB
+  limits: { fileSize: 4 * 1024 * 1024 }, // 4MB límite (Vercel serverless max ~4.5MB)
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/gif', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
