@@ -1,13 +1,15 @@
 const axios = require('axios');
 const FormData = require('form-data');
+const { compressImage } = require('./imageCompression');
 
 /**
- * Sube una imagen a ImgBB
+ * Sube una imagen a ImgBB (con compresión automática)
  * @param {Buffer} imageBuffer - Buffer de la imagen
  * @param {string} imageName - Nombre opcional para la imagen
+ * @param {string} [mimetype='image/jpeg'] - Tipo MIME de la imagen
  * @returns {Promise<string>} URL de la imagen subida
  */
-const uploadImageToImgBB = async (imageBuffer, imageName = '') => {
+const uploadImageToImgBB = async (imageBuffer, imageName = '', mimetype = 'image/jpeg') => {
     const IMGBB_API_KEY = process.env.IMGBB_API_KEY;
     
     if (!IMGBB_API_KEY) {
@@ -15,7 +17,9 @@ const uploadImageToImgBB = async (imageBuffer, imageName = '') => {
     }
 
     try {
-        const base64Image = imageBuffer.toString('base64');
+        // Comprimir imagen antes de subir
+        const compressedBuffer = await compressImage(imageBuffer, mimetype);
+        const base64Image = compressedBuffer.toString('base64');
         const formData = new FormData();
         formData.append('image', base64Image);
         

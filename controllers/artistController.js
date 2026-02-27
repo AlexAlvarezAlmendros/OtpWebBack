@@ -94,9 +94,9 @@ const createArtist = async (req, res) => {
         
         let imageUrl = req.body.img;
         
-        // Si se subió una imagen, subirla a ImgBB
+        // Si se subió una imagen, comprimirla y subirla a ImgBB
         if (req.file) {
-            imageUrl = await uploadImageToImgBB(req.file.buffer, req.body.name);
+            imageUrl = await uploadImageToImgBB(req.file.buffer, req.body.name, req.file.mimetype);
         }
         
         const artistData = {
@@ -126,9 +126,9 @@ const updateArtist = async (req, res) => {
         
         let updateData = { ...req.body };
         
-        // Si se subió una nueva imagen, subirla a ImgBB
+        // Si se subió una nueva imagen, comprimirla y subirla a ImgBB
         if (req.file) {
-            updateData.img = await uploadImageToImgBB(req.file.buffer, req.body.name);
+            updateData.img = await uploadImageToImgBB(req.file.buffer, req.body.name, req.file.mimetype);
         }
         
         // Si no es admin, verificar que sea el dueño del recurso

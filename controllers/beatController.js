@@ -206,9 +206,9 @@ const createBeat = async (req, res) => {
             console.log('🏷️ Tags después de procesar:', beatData.tags);
         }
         
-        // Si se subió una imagen de portada, subirla a ImgBB
+        // Si se subió una imagen de portada, comprimirla y subirla a ImgBB
         if (req.file) {
-            beatData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+            beatData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title, req.file.mimetype);
         }
         
         // Si viene el campo 'artists', usar el primer artista como productor
@@ -302,9 +302,9 @@ const updateBeat = async (req, res) => {
             console.log('🏷️ Tags después de procesar:', updateData.tags);
         }
         
-        // Si se subió una nueva imagen de portada, subirla a ImgBB
+        // Si se subió una nueva imagen de portada, comprimirla y subirla a ImgBB
         if (req.file) {
-            updateData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title);
+            updateData.coverUrl = await uploadImageToImgBB(req.file.buffer, req.body.title, req.file.mimetype);
         }
         
         // Parse licenses if it comes as a string

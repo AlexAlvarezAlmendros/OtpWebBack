@@ -1,6 +1,7 @@
 const axios = require('axios');
 const FormData = require('form-data');
 const multer = require('multer');
+const { compressImage } = require('../utils/imageCompression');
 
 // Configuración de multer para almacenar imágenes en memoria
 const storage = multer.memoryStorage();
@@ -39,8 +40,11 @@ const uploadToImgBB = async (req, res) => {
       });
     }
 
-    // Convertir buffer a base64
-    const base64Image = req.file.buffer.toString('base64');
+    // Comprimir imagen antes de subir
+    const compressedBuffer = await compressImage(req.file.buffer, req.file.mimetype);
+
+    // Convertir buffer comprimido a base64
+    const base64Image = compressedBuffer.toString('base64');
 
     // Crear FormData para ImgBB
     const formData = new FormData();
