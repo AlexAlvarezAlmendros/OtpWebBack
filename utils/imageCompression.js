@@ -1,4 +1,10 @@
-const sharp = require('sharp');
+let sharp;
+try {
+  sharp = require('sharp');
+} catch (err) {
+  console.warn('[ImageCompression] sharp no disponible, las imágenes se subirán sin comprimir:', err.message);
+  sharp = null;
+}
 
 /**
  * Comprime una imagen sin pérdida perceptible de calidad.
@@ -17,6 +23,12 @@ const sharp = require('sharp');
  */
 const compressImage = async (imageBuffer, mimetype, options = {}) => {
   const { maxDimension = 2048, quality = 85 } = options;
+
+  // Si sharp no está disponible, devolver la imagen sin comprimir
+  if (!sharp) {
+    console.warn('[ImageCompression] sharp no disponible, devolviendo imagen original');
+    return imageBuffer;
+  }
 
   // GIF: devolver sin modificar para preservar animaciones
   if (mimetype === 'image/gif') {
