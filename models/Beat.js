@@ -12,6 +12,7 @@ const beatSchema = new Schema({
     coverUrl: { type: String },
     // If beats are related to artists/producers
     producer: { type: mongoose.Schema.Types.ObjectId, ref: 'Artist' },
+    colaboradores: [{ type: String }],
     active: { type: Boolean, default: true },
     
     // Licenses for beat purchases

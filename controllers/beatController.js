@@ -205,6 +205,23 @@ const createBeat = async (req, res) => {
             
             console.log('🏷️ Tags después de procesar:', beatData.tags);
         }
+
+        // Parse colaboradores if it comes as a malformed array
+        if (beatData.colaboradores && Array.isArray(beatData.colaboradores)) {
+            beatData.colaboradores = beatData.colaboradores.flatMap(col => {
+                if (typeof col === 'string') {
+                    try {
+                        const parsed = JSON.parse(col);
+                        return Array.isArray(parsed) ? parsed : [col];
+                    } catch (e) {
+                        return [col];
+                    }
+                }
+                return [col];
+            }).filter(col => col && col.trim && col.trim() !== '');
+
+            console.log('🤝 Colaboradores después de procesar:', beatData.colaboradores);
+        }
         
         // Si se subió una imagen de portada, comprimirla y subirla a ImgBB
         if (req.file) {
@@ -300,6 +317,23 @@ const updateBeat = async (req, res) => {
             }).filter(tag => tag && tag.trim && tag.trim() !== '');
             
             console.log('🏷️ Tags después de procesar:', updateData.tags);
+        }
+
+        // Parse colaboradores if it comes as a malformed array
+        if (updateData.colaboradores && Array.isArray(updateData.colaboradores)) {
+            updateData.colaboradores = updateData.colaboradores.flatMap(col => {
+                if (typeof col === 'string') {
+                    try {
+                        const parsed = JSON.parse(col);
+                        return Array.isArray(parsed) ? parsed : [col];
+                    } catch (e) {
+                        return [col];
+                    }
+                }
+                return [col];
+            }).filter(col => col && col.trim && col.trim() !== '');
+
+            console.log('🤝 Colaboradores después de procesar:', updateData.colaboradores);
         }
         
         // Si se subió una nueva imagen de portada, comprimirla y subirla a ImgBB
