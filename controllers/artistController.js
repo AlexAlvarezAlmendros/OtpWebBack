@@ -1,4 +1,5 @@
 const Artist = require('../models/Artist');
+const Beat = require('../models/Beat');
 const mongoose = require('mongoose');
 const connectDB = require('../utils/dbConnection');
 const { isUserAdmin } = require('../utils/authHelpers');
@@ -152,9 +153,31 @@ const updateArtist = async (req, res) => {
     }
 };
 
+// GET artists that have uploaded at least one beat
+const getArtistsWithBeats = async (req, res) => {
+    try {
+        await connectDB();
+
+        // Get distinct producer IDs from beats (only active beats by default)
+        const showAll = req.query.includeInactive === 'true';
+        const beatFilter = showAll ? {} : { active: true };
+
+        const producerIds = await Beat.distinct('producer', {
+            ...beatFilter,
+            producer: { $ne: null }
+        });
+
+        // Fetch the artists corresponding to those IDs
+        const artists = await Artist.find({ _id: { $in: producerIds } }).lean();
+
+        res.status(200).json({ data: artists, total: artists.length });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+};
+
 // DELETE a artist
-const deleteArtist = async (req, res) => {
-    const { id } = req.params;
+const deleteArtist = async (req, res) => {    const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
         return res.status(404).json({ error: 'ID de artista no válido' });
     }
@@ -189,5 +212,6 @@ module.exports = {
     getArtist,
     createArtist,
     updateArtist,
-    deleteArtist
+    deleteArtist,
+    getArtistsWithBeats
 };

@@ -5,7 +5,8 @@ const {
     getArtist,
     createArtist,
     updateArtist,
-    deleteArtist
+    deleteArtist,
+    getArtistsWithBeats
 } = require('../controllers/artistController');
 const { checkJwt } = require('../middleware/auth');
 const { checkPermissions, checkOwnership } = require('../middleware/permissions');
@@ -14,6 +15,9 @@ const router = express.Router();
 
 // GET todos los artistas (público)
 router.get('/', getArtists);
+
+// GET artistas que tienen al menos un beat subido (público)
+router.get('/with-beats', getArtistsWithBeats);
 
 // GET un solo artista por ID (público)
 router.get('/:id', getArtist);
